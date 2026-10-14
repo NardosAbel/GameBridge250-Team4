@@ -13,6 +13,12 @@ import {
     ShieldCheck,
     CheckCircle2,
     AlertCircle,
+    Flame,
+    Globe,
+    UserPlus,
+    MessageSquare,
+    Bell,
+    ShieldAlert,
 } from 'lucide-react';
 import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
 import { ThemeSwitcher } from '../components/ui/ThemeSwitcher';
@@ -87,11 +93,11 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                             {t('common.platform_title')}
                         </Link>
                         <Link
-                            href="/tournaments"
+                            href="/feed"
                             className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
                         >
-                            <Trophy className="w-4 h-4 text-amber-400" />
-                            {t('common.tournaments')}
+                            <Flame className="w-4 h-4 text-orange-400" />
+                            Feed
                         </Link>
                         <Link
                             href="/teams"
@@ -101,19 +107,46 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                             {t('common.teams')}
                         </Link>
                         <Link
-                            href="/venues"
+                            href="/communities"
                             className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
                         >
-                            <Building2 className="w-4 h-4 text-indigo-400" />
-                            {t('common.venues')}
+                            <Globe className="w-4 h-4 text-cyan-400" />
+                            Communities
                         </Link>
                         <Link
-                            href="/learning"
+                            href="/recruitment"
                             className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
                         >
-                            <BookOpen className="w-4 h-4 text-teal-400" />
-                            {t('common.learning')}
+                            <UserPlus className="w-4 h-4 text-pink-400" />
+                            Recruitment
                         </Link>
+                        {auth.user && (
+                            <>
+                                <Link
+                                    href="/chat"
+                                    className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
+                                >
+                                    <MessageSquare className="w-4 h-4 text-blue-400" />
+                                    Chat
+                                </Link>
+                                <Link
+                                    href="/notifications"
+                                    className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
+                                >
+                                    <Bell className="w-4 h-4 text-amber-400" />
+                                    Alerts
+                                </Link>
+                                {auth.user.roles.some((r: string) => ['admin', 'moderator'].includes(r)) && (
+                                    <Link
+                                        href="/moderation/queue"
+                                        className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
+                                    >
+                                        <ShieldAlert className="w-4 h-4 text-rose-400" />
+                                        Mod Queue
+                                    </Link>
+                                )}
+                            </>
+                        )}
                     </nav>
 
                     {/* Right Utilities (Theme, Lang, Auth) */}

@@ -20,7 +20,8 @@ class AuditLogger
         ?string $entityType = null,
         ?int $entityId = null,
         ?array $oldValues = null,
-        ?array $newValues = null
+        ?array $newValues = null,
+        ?array $metadata = null
     ): AuditLog {
         return AuditLog::create([
             'user_id' => $user?->id ?? auth()->id(),
@@ -28,7 +29,7 @@ class AuditLogger
             'entity_type' => $entityType,
             'entity_id' => $entityId,
             'old_values' => $oldValues,
-            'new_values' => $newValues,
+            'new_values' => $newValues ?? $metadata,
             'ip_address' => Request::ip(),
             'user_agent' => Request::userAgent(),
         ]);

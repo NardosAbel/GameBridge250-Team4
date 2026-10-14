@@ -2,9 +2,16 @@
 
 namespace App\Models;
 
+use App\Domain\Communities\Models\CommunityMember;
 use App\Domain\Identity\Enums\UserStatusEnum;
 use App\Domain\Identity\Models\AuditLog;
+use App\Domain\Notifications\Models\NotificationPreference;
 use App\Domain\Profiles\Models\Profile;
+use App\Domain\Social\Models\Follow;
+use App\Domain\Social\Models\Post;
+use App\Domain\Social\Models\UserBlock;
+use App\Domain\Social\Models\UserMute;
+use App\Domain\Teams\Models\TeamMember;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -69,6 +76,41 @@ class User extends Authenticatable
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class);
+    }
+
+    public function notificationPreference(): HasOne
+    {
+        return $this->hasOne(NotificationPreference::class);
+    }
+
+    public function posts(): HasMany
+    {
+        return $this->hasMany(Post::class, 'user_id');
+    }
+
+    public function teamMembers(): HasMany
+    {
+        return $this->hasMany(TeamMember::class);
+    }
+
+    public function communityMembers(): HasMany
+    {
+        return $this->hasMany(CommunityMember::class);
+    }
+
+    public function follows(): HasMany
+    {
+        return $this->hasMany(Follow::class, 'follower_id');
+    }
+
+    public function blockedUsers(): HasMany
+    {
+        return $this->hasMany(UserBlock::class, 'user_id');
+    }
+
+    public function mutedUsers(): HasMany
+    {
+        return $this->hasMany(UserMute::class, 'user_id');
     }
 
     public function isActive(): bool

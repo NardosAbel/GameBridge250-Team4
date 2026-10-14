@@ -22,34 +22,38 @@ campus-esports-ethiopia/
 │   ├── app/
 │   │   ├── Domain/                # Domain-Driven Modular Monolith
 │   │   │   ├── Identity/          # Authentication, OTP, RBAC, Audit Logging
-│   │   │   ├── Profiles/          # Player profiles, Games, Verification
-│   │   │   ├── Social/            # Feed, Posts, Media, Comments, Reactions
-│   │   │   ├── Teams/             # Rosters, Roles, Transfers, Invitations
-│   │   │   ├── Communities/       # Campus clubs, City hubs, Moderation
-│   │   │   ├── Tournaments/       # Brackets, Matches, Results, Disputes, Rankings
-│   │   │   ├── Ticketing/         # Orders, Offline-ready Signed QR Tokens, Scanners
-│   │   │   ├── Payments/          # Telebirr, Chapa, M-Pesa abstractions
+│   │   │   ├── Profiles/          # Player profiles, Games, Verification, Privacy
+│   │   │   ├── Social/            # Feed, Posts, Media, Comments, Reactions, Shares, Bookmarks
+│   │   │   ├── Teams/             # Rosters, Roles, Transfers, Invitations, Roster History
+│   │   │   ├── Communities/       # Campus clubs, City hubs, Approval flows, Moderation
+│   │   │   ├── Recruitment/       # LFT / LFP notice board with multi-attribute filtering
+│   │   │   ├── Chat/              # Direct, Team, and Community messaging with @mentions
+│   │   │   ├── Notifications/     # Multi-channel notification pipeline (In-app, push, email, SMS)
+│   │   │   ├── Moderation/        # Reports, Sanctions (warn, mute, suspend, ban), Audit logging
+│   │   │   ├── Tournaments/       # Brackets, Matches, Results, Disputes, Rankings (Phase 3)
+│   │   │   ├── Ticketing/         # Orders, Offline-ready Signed QR Tokens, Scanners (Phase 3)
+│   │   │   ├── Payments/          # Telebirr, Chapa, M-Pesa abstractions (Phase 3)
 │   │   │   ├── Venues/            # Gaming zones, Facilities, Check-ins
 │   │   │   ├── Education/         # Digital literacy courses, Quizzes, Certificates
-│   │   │   ├── Sponsorship/       # Packages, Deliverables, Brand reports
-│   │   │   └── Moderation/        # Reports, Sanctions, Trust & Safety
+│   │   │   └── Sponsorship/       # Packages, Deliverables, Brand reports
 │   │   ├── Http/
-│   │   │   ├── Controllers/Api/   # Thin API Controllers (v1)
-│   │   │   ├── Controllers/Web/   # Inertia Web Controllers
-│   │   │   ├── Requests/          # Form Request Validators
+│   │   │   ├── Controllers/Api/   # REST API Controllers (v1)
+│   │   │   ├── Controllers/Web/   # Inertia Web Controllers (Feed, Teams, Communities, Recruitment, Chat, Alerts, Mod Queue)
+│   │   │   ├── Requests/          # Form Request Validators with Policy authorizations
 │   │   │   ├── Resources/         # Standardized API Resources
 │   │   │   └── Middleware/        # Inertia, RBAC, Rate-limiters
 │   ├── database/
-│   │   ├── migrations/            # 29 Core Domain Migrations (PostgreSQL/MySQL/SQLite)
+│   │   ├── migrations/            # 34 Core Domain Migrations (PostgreSQL/MySQL/SQLite)
 │   │   └── seeders/               # 9 Roles, Admin, Organizer, Player, Core Games
 │   ├── resources/
 │   │   ├── js/                    # React 19 + Inertia + TypeScript Frontend
 │   │   │   ├── components/ui/     # Accessible base component library (WCAG 2.1 AA)
-│   │   │   ├── layouts/           # Responsive AppLayout with Header, Footer, Flash alerts
-│   │   │   ├── pages/             # Landing, Register, Login, VerifyOtp, ResetPassword, Profile, Dashboard
+│   │   │   ├── layouts/           # Responsive AppLayout with Navigation, Live Alerts, Role Badges
+│   │   │   ├── pages/             # Feed, Teams, Communities, Recruitment, Chat, Notifications, Moderation Queue, Profile, Auth
 │   │   │   ├── hooks/             # useTranslation (EN/AM), useTheme (Dark/Light)
 │   │   │   └── i18n/              # English (`en.json`) and Amharic (`am.json`)
-│   └── tests/                     # Pest Feature & Unit Test Suite
+│   └── tests/                     # 45 Pest Feature & Unit Tests (196 Assertions)
+├── docs/                          # Architecture, API Documentation, Database Schema & Guides
 ├── docker/                        # Multi-stage Dockerfile and Nginx configuration
 ├── docker-compose.yml             # Full-stack Docker Compose environment
 └── .github/workflows/ci.yml       # GitHub Actions CI for Pint, Pest, TypeScript, Vite, Docker

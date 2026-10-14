@@ -16,15 +16,24 @@ class Profile extends Model
         'uuid',
         'user_id',
         'gamer_tag',
+        'handle',
         'bio',
         'avatar_url',
         'cover_url',
+        'banner_url',
         'university',
+        'location',
         'school_id_number',
         'student_verified',
         'platform_handles',
         'preferred_games',
+        'roles',
+        'platforms',
+        'availability',
         'is_public',
+        'privacy_settings',
+        'achievements',
+        'badges',
     ];
 
     protected static function booted(): void
@@ -43,6 +52,12 @@ class Profile extends Model
             'is_public' => 'boolean',
             'platform_handles' => 'array',
             'preferred_games' => 'array',
+            'roles' => 'array',
+            'platforms' => 'array',
+            'availability' => 'array',
+            'privacy_settings' => 'array',
+            'achievements' => 'array',
+            'badges' => 'array',
         ];
     }
 

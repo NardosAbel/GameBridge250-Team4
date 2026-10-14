@@ -45,5 +45,42 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
+    // Phase 2 Social & Gaming Pages
+    Route::get('/feed', function () {
+        return Inertia::render('Social/Feed');
+    })->name('feed');
+
+    Route::get('/teams', function () {
+        return Inertia::render('Teams/Index');
+    })->name('teams.index');
+
+    Route::get('/teams/{id}', function ($id) {
+        return Inertia::render('Teams/Show', ['teamId' => (int) $id]);
+    })->name('teams.show');
+
+    Route::get('/communities', function () {
+        return Inertia::render('Communities/Index');
+    })->name('communities.index');
+
+    Route::get('/communities/{id}', function ($id) {
+        return Inertia::render('Communities/Show', ['communityId' => (int) $id]);
+    })->name('communities.show');
+
+    Route::get('/recruitment', function () {
+        return Inertia::render('Recruitment/Index');
+    })->name('recruitment.index');
+
+    Route::get('/chat', function () {
+        return Inertia::render('Chat/Index');
+    })->name('chat.index');
+
+    Route::get('/notifications', function () {
+        return Inertia::render('Notifications/Index');
+    })->name('notifications.index');
+
+    Route::get('/moderation/queue', function () {
+        return Inertia::render('Moderation/Queue');
+    })->name('moderation.queue');
+
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });

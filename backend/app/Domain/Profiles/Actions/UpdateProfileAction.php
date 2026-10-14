@@ -31,13 +31,22 @@ class UpdateProfileAction
 
             $profile->update(array_filter([
                 'gamer_tag' => $data['gamer_tag'] ?? null,
+                'handle' => $data['handle'] ?? ($data['gamer_tag'] ?? null),
                 'bio' => $data['bio'] ?? null,
                 'avatar_url' => $data['avatar_url'] ?? null,
-                'cover_url' => $data['cover_url'] ?? null,
+                'cover_url' => $data['cover_url'] ?? ($data['banner_url'] ?? null),
+                'banner_url' => $data['banner_url'] ?? ($data['cover_url'] ?? null),
+                'location' => $data['location'] ?? null,
                 'university' => $data['university'] ?? null,
                 'school_id_number' => $data['school_id_number'] ?? null,
                 'platform_handles' => $data['platform_handles'] ?? null,
                 'preferred_games' => $data['preferred_games'] ?? null,
+                'roles' => $data['roles'] ?? null,
+                'platforms' => $data['platforms'] ?? null,
+                'availability' => $data['availability'] ?? null,
+                'privacy_settings' => $data['privacy_settings'] ?? null,
+                'achievements' => $data['achievements'] ?? null,
+                'badges' => $data['badges'] ?? null,
                 'is_public' => isset($data['is_public']) ? (bool) $data['is_public'] : null,
             ], fn ($val) => ! is_null($val)));
 

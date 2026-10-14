@@ -1,0 +1,46 @@
+# Root .gitignore for Campus Esports Ethiopia
+
+# Environment & Secrets
+.env
+.env.backup
+.env.production
+*.env
+
+# Dependencies
+/backend/vendor/
+/backend/node_modules/
+/frontend/node_modules/
+node_modules/
+vendor/
+
+# Storage & Caches
+/backend/storage/*.key
+/backend/storage/framework/cache/*
+/backend/storage/framework/sessions/*
+/backend/storage/framework/views/*
+/backend/storage/logs/*
+!/backend/storage/framework/cache/.gitignore
+!/backend/storage/framework/sessions/.gitignore
+!/backend/storage/framework/views/.gitignore
+!/backend/storage/logs/.gitignore
+/backend/bootstrap/cache/*
+!/backend/bootstrap/cache/.gitignore
+
+# Build Outputs & Hot Reload
+/backend/public/hot
+/backend/public/storage
+
+# Database
+/backend/database/*.sqlite
+/backend/database/*.sqlite-journal
+
+# IDE & OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

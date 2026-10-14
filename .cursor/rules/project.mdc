@@ -1,0 +1,295 @@
+---
+description: Engineering standards for the Integrated Gaming, Esports & Digital Awareness Platform
+alwaysApply: true
+---
+
+# Project context
+
+You are building a production-ready **Integrated Gaming, Esports & Digital Awareness Platform** for Ethiopia and future regional expansion.
+
+The platform connects gamers, teams, schools, universities, gaming zones, tournament organizers, sponsors, creators, moderators, and technology learners.
+
+Core capabilities:
+
+- Gamer profiles and social network
+- Teams, communities, recruitment, and communication
+- Tournament creation, registration, brackets, results, disputes, and rankings
+- Ticketing, local payments, QR-code entry, and attendance reporting
+- Gaming-zone/venue profiles, events, and venue analytics
+- School and university esports network
+- Digital-awareness courses, campaigns, quizzes, and certificates
+- Sponsorship marketplace and sponsor performance reporting
+- Moderation, trust and safety, audit logging, and platform administration
+
+The product must be secure, scalable, accessible, multilingual, mobile-first, low-bandwidth friendly, and suitable for users with intermittent internet connectivity.
+
+# Technology stack
+
+Use the following stack unless the user explicitly requests a change:
+
+- Backend: Laravel 12+ and PHP 8.3+
+- Frontend: React + Inertia + TypeScript with Tailwind CSS
+- Database: PostgreSQL preferred; keep schema compatible with MySQL where practical
+- Cache, queues, rate limiting, pub/sub: Redis
+- Real-time: Laravel Reverb or compatible WebSockets
+- Queue monitoring: Laravel Horizon
+- API authentication: Laravel Sanctum
+- RBAC: Spatie Laravel Permission or equivalent
+- Search: Meilisearch or a search-service abstraction
+- Media storage: S3-compatible object storage with CDN
+- Payments: provider-agnostic abstraction supporting Telebirr, Chapa, M-Pesa, cards, bank transfer, and manual verification
+- Notifications: in-app, email, SMS, and Firebase Cloud Messaging
+- Testing: Pest
+- Static analysis: PHPStan/Larastan
+- Code style: Laravel Pint
+- CI/CD: GitHub Actions
+- Local development: Docker Compose
+
+# Architecture rules
+
+- Use a modular monolith. Organize code by domain modules, not by generic technical folders alone.
+- Use clear domain modules: Identity, Profiles, Social, Teams, Communities, Tournaments, Ticketing, Payments, Venues, Education, Sponsorship, Moderation, and Administration.
+- Keep controllers thin. Controllers should only handle HTTP concerns.
+- Put business logic in Action or Service classes within the relevant domain module.
+- Use Form Requests for validation.
+- Use API Resources for consistent API responses.
+- Use Policies for authorization.
+- Use Events, Listeners, Jobs, and Notifications for side effects and asynchronous work.
+- Use database transactions for operations that modify related records, especially payments, tickets, brackets, results, rankings, and refunds.
+- Use UUIDs or ULIDs for public-facing identifiers.
+- Use migrations, factories, and seeders for every new database structure and test dataset.
+- Do not use raw SQL unless there is a clear performance or database-specific reason.
+- Do not place business logic in routes, Blade templates, React components, or controllers.
+- Maintain backward compatibility for public APIs whenever possible.
+
+# Backend code standards
+
+- Use PHP 8.3+ features appropriately: constructor property promotion, readonly properties, enums, match expressions, and typed properties.
+- Use strict comparison and avoid loose type comparisons.
+- Use meaningful, domain-specific names.
+- Prefer small, focused classes and methods.
+- Avoid duplicated logic; extract reusable services or actions.
+- Avoid hidden dependencies; inject dependencies through constructors or method parameters.
+- Use enums or constants for statuses instead of scattered magic strings.
+- Use database indexes for frequently queried fields and foreign keys.
+- Use unique constraints where business rules require uniqueness.
+- Use soft deletes only when recovery or historical retention is genuinely required.
+- Return consistent JSON responses.
+
+Successful response format:
+
+```json
+{
+  "success": true,
+  "message": "Resource created successfully.",
+  "data": {}
+}
+```
+
+Validation error format:
+
+```json
+{
+  "success": false,
+  "message": "Validation failed.",
+  "errors": {
+    "email": ["The email has already been taken."]
+  }
+}
+```
+
+# Security rules
+
+Security is mandatory, not optional.
+
+- Use HTTPS in production.
+- Store passwords using Laravel’s secure hashing.
+- Use Laravel Sanctum tokens for API authentication.
+- Verify email and/or phone using OTP.
+- Support optional two-factor authentication.
+- Enforce RBAC through Policies, Gates, and middleware.
+- Never rely on hidden UI elements as authorization.
+- Validate all user input with Form Requests.
+- Protect against IDOR by checking ownership, team membership, organizer role, venue assignment, and institution scope.
+- Apply rate limiting to login, registration, OTP, password reset, uploads, checkout, search, and ticket scanning.
+- Verify payment webhooks using provider signatures.
+- Use idempotency keys or equivalent protection to prevent duplicate payment processing.
+- Store payment and ticket tokens securely; never store raw secrets, OTPs, QR secrets, or card data.
+- Generate QR codes using signed, backend-validated tokens.
+- QR payloads must not contain personal information, payment information, or sensitive ticket data.
+- Reject duplicate, expired, revoked, refunded, and wrong-event tickets.
+- Support offline scanner mode with locally queued scans and final server-side reconciliation.
+- Log sensitive actions in an immutable audit trail: login, role changes, bans, payment events, refunds, payouts, ticket revocations, moderation actions, result changes, and dispute resolutions.
+- Use signed URLs for private media.
+- Set secure production headers including HSTS, CSP, X-Frame-Options, X-Content-Type-Options, and Referrer-Policy.
+- Never commit `.env`, API keys, tokens, certificates, or credentials.
+- Keep `.env.example` complete, accurate, and documented.
+
+# Tournament engine rules
+
+The tournament engine must be reliable, testable, and transactional.
+
+Support:
+
+- Single elimination
+- Double elimination
+- Round robin
+- Swiss system
+- Group stage plus knockout
+- Best-of-1, Best-of-3, and Best-of-5
+- Online, offline/venue-based, and hybrid events
+- Individual and team registration
+- Free, paid, invitation-only, and qualification-based entry
+
+Implement:
+
+- Tournament lifecycle: draft, published, registration open, registration closed, check-in, live, completed, cancelled, archived
+- Eligibility checks for age, region, school, platform, rank, gender division, and roster lock
+- Automatic bracket generation, seeding, byes, scheduling, and winner advancement
+- Manual seeding and organizer override
+- Match check-in and ready-up confirmation
+- Result submission by authorized captains, referees, or organizers
+- Opponent confirmation and organizer override
+- Evidence upload for screenshots, clips, game IDs, and referee notes
+- Dispute and appeal workflow
+- Live bracket updates through WebSockets
+- Tournament points, game-specific ratings, seasonal leaderboards, and ranking snapshots
+- Notifications for schedule changes, opponent assignments, results, disqualifications, and check-in reminders
+
+A result must not finalize without required confirmation or authorized organizer override. A disputed match must not advance the bracket until resolved.
+
+# Ticketing and QR rules
+
+- Support free and paid ticket types.
+- Support general admission, VIP, student, player pass, team pass, staff, press, vendor, early-bird, group, and complimentary tickets.
+- Enforce inventory limits and prevent overselling during concurrent purchases.
+- Create a ticket only after successful payment or approved manual verification.
+- Generate one unique signed QR token per ticket.
+- Validate every scan against the backend.
+- Mark used tickets so they cannot be scanned again.
+- Reject expired, revoked, refunded, transferred-invalid, and wrong-event tickets.
+- Scope scanner permissions by event and venue.
+- Support offline scanning with queued validation and synchronization.
+- Provide sales, revenue, attendance, no-show, refund, scanner-performance, and payout reports.
+- Support refunds only according to organizer-defined policy and record every refund in audit logs.
+
+# Frontend standards
+
+Build a modern, accessible, high-performance frontend.
+
+- Use TypeScript.
+- Use Tailwind CSS and a consistent design system.
+- Use Inertia.js for Laravel-connected pages.
+- Use a server-state library where needed.
+- Use Zod or an equivalent library for frontend validation.
+- Build mobile-first responsive layouts.
+- Support dark and light mode.
+- Support English and Amharic localization.
+- Use semantic HTML and accessible components.
+- Ensure keyboard navigation, visible focus indicators, sufficient contrast, labels, error messages, and screen-reader compatibility.
+- Follow WCAG 2.1 AA.
+- Use skeleton loaders, empty states, error states, retry states, and optimistic updates only where safe.
+- Lazy-load images and long lists.
+- Compress and resize media before upload where possible.
+- Use real-time updates for brackets, chat, notifications, ticket availability, and scanner feedback.
+- Avoid visual clutter; prioritize clarity, hierarchy, speed, and trust.
+
+Required frontend areas:
+
+- Landing page
+- Authentication and onboarding
+- Gamer profile
+- Social feed
+- Teams and recruitment
+- Communities
+- Tournament discovery
+- Tournament details and live bracket
+- Organizer dashboard
+- Ticket checkout and ticket wallet
+- Venue directory and venue profile
+- School/university network
+- Learning hub
+- Sponsor portal
+- Admin and moderation console
+- Scanner interface
+- Settings, privacy, notifications, and security
+
+# Localization and accessibility
+
+- Store user language preference.
+- Translate UI strings, emails, SMS, notifications, validation messages, and transactional content.
+- Start with English and Amharic.
+- Design the localization system to support additional Ethiopian languages.
+- Use local date, time, currency, and phone-number formatting.
+- Provide text alternatives for meaningful images.
+- Provide captions or transcripts for important video content.
+- Do not use color alone to convey status.
+- Test critical flows with keyboard-only navigation.
+
+# Testing rules
+
+Use Pest. Do not create placeholder tests.
+
+Required test coverage:
+
+- Registration, login, OTP, password reset, and session management
+- RBAC and authorization policies
+- Profile privacy and blocked/muted users
+- Team roles, roster permissions, invitations, and transfers
+- Community moderation
+- Tournament creation, publication, registration, and eligibility
+- Bracket generation for every supported format
+- Match result confirmation and organizer override
+- Dispute creation, review, and resolution
+- Ranking and leaderboard calculation
+- Ticket inventory and concurrent purchase prevention
+- Payment webhook success, failure, retry, duplicate, and reconciliation cases
+- QR generation, validation, duplicate rejection, and offline synchronization
+- Refunds, revocations, and ticket transfers
+- Content reporting and moderation actions
+- Notification jobs and user preferences
+- API validation and authorization failures
+
+Write architecture tests where practical to prevent business logic in controllers and to preserve module boundaries.
+
+# Git and delivery rules
+
+- Use small, focused commits with clear messages.
+- Use feature branches and pull requests.
+- Do not commit generated files, secrets, vendor directories, or local environment files.
+- Keep `README.md`, `.env.example`, API documentation, and deployment documentation current.
+- Before saying a feature is complete, ensure implementation, authorization, validation, migrations/factories, tests, documentation, and security are complete.
+
+# Implementation workflow
+
+Work in small, verifiable increments.
+
+Recommended sequence:
+
+1. Project foundation: repository, Docker, Laravel, React/Inertia, PostgreSQL, Redis, storage, queues, authentication, RBAC, design system, CI.
+2. Profiles, social network, teams, communities, recruitment, and notifications.
+3. Tournament engine: tournaments, registration, brackets, matches, results, disputes, rankings, and live updates.
+4. Ticketing, payments, QR validation, venues, scanner, refunds, and reports.
+5. Digital-awareness learning hub, courses, quizzes, certificates, and campaigns.
+6. Sponsorship marketplace, sponsor reporting, analytics, and admin dashboards.
+7. Security hardening, performance optimization, accessibility audit, production deployment, monitoring, and launch checklist.
+
+After each phase, report:
+
+- Features implemented
+- Files created or modified
+- Migrations created
+- API endpoints created
+- Tests created and results
+- Manual QA checklist
+- Known limitations
+- Recommended next steps
+
+# Response behavior
+
+- Ask clarifying questions only when a decision would materially affect architecture, security, payments, data privacy, or scope.
+- Otherwise, make sensible professional decisions and document assumptions.
+- If a task is too large for one response, implement the foundation first and continue module by module.
+- Never claim completion without tests and verification.
+- Never leave TODOs in production-critical paths.
+- Prefer maintainable, secure, explicit code over clever or fragile code.

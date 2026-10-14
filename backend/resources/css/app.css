@@ -1,0 +1,18 @@
+@import 'tailwindcss';
+
+@source '../views/**/*.blade.php';
+@source '../js/**/*.tsx';
+@source '../js/**/*.ts';
+
+@theme {
+    --font-sans: 'Inter', 'Noto Sans Ethiopic', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --color-brand-primary: #10b981;
+    --color-brand-accent: #6366f1;
+}
+
+@layer base {
+    body {
+        @apply antialiased text-slate-100 bg-slate-950 min-h-screen selection:bg-emerald-500 selection:text-white;
+        font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    }
+}

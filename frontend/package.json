@@ -1,0 +1,26 @@
+{
+  "name": "campus-esports-ethiopia-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npm --prefix ../backend run dev",
+    "build": "npm --prefix ../backend run build",
+    "lint": "tsc --noEmit --project ../backend/tsconfig.json"
+  },
+  "dependencies": {
+    "@inertiajs/react": "^2.0.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.16.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.0",
+    "vite": "^8.0.0"
+  }
+}

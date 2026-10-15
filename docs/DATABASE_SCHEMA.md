@@ -451,3 +451,153 @@ Automated flags detecting duplicate IPs, student ID reuse across accounts, and m
 - `review_notes`: Text, Nullable
 - `created_at`, `updated_at`: Timestamps
 
+---
+
+## Phase 4: Ticketing, Local Payments, QR Gate Entry, and Venue Network
+
+### `venues`
+Physical LAN gaming cafes, university gaming lounges, and tournament arenas.
+- `id`: Bigint unsigned, Primary Key
+- `uuid`: UUID, Unique
+- `name`: Varchar(255)
+- `slug`: Varchar(255), Unique
+- `description`: Text, Nullable
+- `owner_id`: Foreign key -> `users(id)` ON DELETE SET NULL, Nullable
+- `address`: Varchar(255)
+- `city`: Varchar(100), Indexed
+- `latitude`: Decimal(10, 7), Nullable (Used for Haversine distance search)
+- `longitude`: Decimal(10, 7), Nullable (Used for Haversine distance search)
+- `map_link`: Varchar(500), Nullable
+- `facilities`: JSON, Nullable (`fiber_internet`, `rtx_gaming_pcs`, `ps5_consoles`, `streaming_studio`, etc.)
+- `opening_hours`: JSON, Nullable
+- `contact_details`: JSON, Nullable (phone, email, telegram)
+- `rules`: JSON, Nullable
+- `capacity`: Integer, Default 50
+- `hourly_rate`: Decimal(10, 2), Nullable
+- `pricing_details`: JSON, Nullable
+- `currency`: Varchar(3), Default `'ETB'`
+- `verified`: Boolean, Default `false`
+- `is_featured`: Boolean, Default `false`
+- `photos`: JSON, Nullable
+- `created_at`, `updated_at`, `deleted_at`: Timestamps
+
+### `venue_staff`
+Role-scoped personnel assignments for gate scanning, moderation, or operations.
+- `id`: Bigint unsigned, Primary Key
+- `venue_id`: Foreign key -> `venues(id)` ON DELETE CASCADE
+- `user_id`: Foreign key -> `users(id)` ON DELETE CASCADE
+- `role`: Enum (`manager`, `moderator`, `scanner`), Default `'scanner'`
+- `is_active`: Boolean, Default `true`
+- `created_at`, `updated_at`: Timestamps
+
+### `venue_reviews`
+Attendee ratings and qualitative feedback on equipment, ping, and atmosphere.
+- `id`: Bigint unsigned, Primary Key
+- `venue_id`: Foreign key -> `venues(id)` ON DELETE CASCADE
+- `user_id`: Foreign key -> `users(id)` ON DELETE CASCADE
+- `rating`: Tinyint unsigned (1-5)
+- `comment`: Text, Nullable
+- `is_verified_visit`: Boolean, Default `false`
+- `created_at`, `updated_at`: Timestamps
+
+### `events`
+Scheduled community LAN parties, viewings, and venue-hosted tournaments.
+- `id`: Bigint unsigned, Primary Key
+- `uuid`: UUID, Unique
+- `venue_id`: Foreign key -> `venues(id)` ON DELETE SET NULL, Nullable
+- `organizer_id`: Foreign key -> `users(id)` ON DELETE CASCADE
+- `tournament_id`: Foreign key -> `tournaments(id)` ON DELETE SET NULL, Nullable
+- `title`: Varchar(255)
+- `slug`: Varchar(255), Unique
+- `description`: Text, Nullable
+- `banner_url`: Varchar(500), Nullable
+- `event_type`: Enum (`lan_tournament`, `viewing_party`, `community_scrim`, `bootcamp`, `meetup`, `recurring_league`)
+- `recurring_pattern`: Enum (`none`, `weekly`, `biweekly`, `monthly`), Default `'none'`
+- `capacity`: Integer, Default 100
+- `start_time`, `end_time`: Timestamps
+- `status`: Enum (`draft`, `published`, `live`, `completed`, `cancelled`), Default `'draft'`
+- `created_at`, `updated_at`: Timestamps
+
+### `ticket_types`
+Configurable admission tiers (General Admission, VIP, Student, Player Pass, Complimentary).
+- `id`: Bigint unsigned, Primary Key
+- `uuid`: UUID, Unique
+- `tournament_id`: Foreign key -> `tournaments(id)` ON DELETE CASCADE, Nullable
+- `event_id`: Foreign key -> `events(id)` ON DELETE CASCADE, Nullable
+- `name`: Varchar(150)
+- `description`: Text, Nullable
+- `category`: Enum (`free_rsvp`, `general_admission`, `vip`, `student`, `player_pass`, `team_pass`, `staff`, `press`, `vendor`, `early_bird`, `group`, `complimentary`)
+- `price`: Decimal(10, 2), Default 0.00
+- `currency`: Varchar(3), Default `'ETB'`
+- `quantity_total`: Integer unsigned
+- `quantity_sold`: Integer unsigned, Default 0
+- `min_per_order`: Integer unsigned, Default 1
+- `max_per_order`: Integer unsigned, Default 10
+- `service_fee`: Decimal(10, 2), Default 0.00
+- `sales_start_at`, `sales_end_at`: Timestamps, Nullable
+- `settings`: JSON, Nullable (perks list, seat allocations)
+- `is_active`: Boolean, Default `true`
+- `created_at`, `updated_at`: Timestamps
+
+### `promo_codes`
+Discount codes and campaign vouchers with usage limits and expiration windows.
+- `id`: Bigint unsigned, Primary Key
+- `code`: Varchar(50), Unique
+- `tournament_id`: Foreign key -> `tournaments(id)` ON DELETE CASCADE, Nullable
+- `event_id`: Foreign key -> `events(id)` ON DELETE CASCADE, Nullable
+- `discount_type`: Enum (`fixed`, `percentage`), Default `'percentage'`
+- `discount_value`: Decimal(10, 2)
+- `usage_limit`: Integer unsigned, Nullable
+- `used_count`: Integer unsigned, Default 0
+- `is_active`: Boolean, Default `true`
+- `expires_at`: Timestamp, Nullable
+- `created_at`, `updated_at`: Timestamps
+
+### `ticket_orders` & `ticket_order_items`
+Purchases locked transactionally to ensure strictly zero overselling.
+- `ticket_orders`: `id`, `uuid`, `order_number` (Unique), `user_id`, `event_id`, `tournament_id`, `promo_code_id`, `subtotal`, `discount_amount`, `service_fee`, `total_amount`, `currency` (ETB), `payment_method`, `status` (`pending`, `paid`, `cancelled`, `refunded`, `partially_refunded`), `created_at`, `updated_at`
+- `ticket_order_items`: `id`, `ticket_order_id`, `ticket_type_id`, `unit_price`, `quantity`, `subtotal`, `created_at`, `updated_at`
+
+### `tickets`
+Individual admission passes containing cryptographically signed HMAC-SHA256 QR tokens.
+- `id`: Bigint unsigned, Primary Key
+- `uuid`: UUID, Unique
+- `ticket_order_id`: Foreign key -> `ticket_orders(id)` ON DELETE CASCADE
+- `ticket_type_id`: Foreign key -> `ticket_types(id)` ON DELETE CASCADE
+- `event_id`: Foreign key -> `events(id)` ON DELETE CASCADE, Nullable
+- `tournament_id`: Foreign key -> `tournaments(id)` ON DELETE CASCADE, Nullable
+- `venue_id`: Foreign key -> `venues(id)` ON DELETE SET NULL, Nullable
+- `user_id`: Foreign key -> `users(id)` ON DELETE CASCADE (Attendee)
+- `ticket_code`: Varchar(50), Unique
+- `qr_token_hash`: Varchar(64), Unique
+- `qr_signature`: Varchar(255), Nullable (HMAC-SHA256 signature)
+- `status`: Enum (`pending_payment`, `active`, `checked_in`, `used`, `expired`, `revoked`, `refunded`, `transferred`), Default `'active'`
+- `checked_in_at`: Timestamp, Nullable
+- `checked_in_by_id`: Foreign key -> `users(id)` ON DELETE SET NULL, Nullable
+- `transferred_to_user_id`: Foreign key -> `users(id)` ON DELETE SET NULL, Nullable
+- `transfer_history`: JSON, Nullable
+- `expires_at`: Timestamp, Nullable
+- `created_at`, `updated_at`: Timestamps
+
+### `ticket_scans`
+Gate activity audit log capturing real-time and synchronized offline scans.
+- `id`: Bigint unsigned, Primary Key
+- `ticket_id`: Foreign key -> `tickets(id)` ON DELETE CASCADE
+- `venue_id`: Foreign key -> `venues(id)` ON DELETE SET NULL, Nullable
+- `event_id`: Foreign key -> `events(id)` ON DELETE SET NULL, Nullable
+- `scanned_by_id`: Foreign key -> `users(id)` ON DELETE CASCADE (Staff)
+- `device_id`: Varchar(100), Nullable
+- `status`: Enum (`valid`, `duplicate`, `expired`, `revoked`, `wrong_event`, `invalid`)
+- `scanned_at`: Timestamp
+- `created_at`, `updated_at`: Timestamps
+
+### `payments` & `payment_webhooks`
+Gateway abstractions supporting Telebirr, Chapa, M-Pesa, Card, and Bank Transfers.
+- `payments`: `id`, `uuid`, `ticket_order_id`, `user_id`, `amount`, `fee`, `currency`, `provider` (`telebirr`, `chapa`, `mpesa`, `card`, `bank_transfer`, `manual`), `provider_reference`, `status` (`pending`, `paid`, `failed`, `cancelled`, `refunded`, `partially_refunded`), `idempotency_key` (Unique), `webhook_payload` (JSON), `metadata` (JSON), `paid_at`, `created_at`, `updated_at`
+- `payment_webhooks`: `id`, `provider`, `event_type`, `provider_reference`, `payload` (JSON), `signature`, `status` (`processed`, `duplicate`, `failed`), `error_message`, `created_at`, `updated_at`
+
+### `refunds` & `payouts`
+Attendee refund approval workflows and organizer fee-transparent settlement payouts.
+- `refunds`: `id`, `uuid`, `payment_id`, `ticket_order_id`, `user_id` (Requester), `processed_by_id`, `amount`, `reason`, `reason_category` (`event_cancelled`, `event_rescheduled`, `attendee_unavailable`, `duplicate_purchase`, `other`), `status` (`pending`, `approved`, `rejected`, `completed`), `rejection_reason`, `processed_at`, `created_at`, `updated_at`
+- `payouts`: `id`, `uuid`, `user_id` (Organizer), `event_id`, `tournament_id`, `amount` (Net amount), `gross_amount`, `platform_fee` (5% transparent fee), `currency` (ETB), `provider` (`telebirr`, `cbe`, `awash`, `mpesa`), `account_number`, `status` (`pending`, `approved`, `processing`, `completed`, `rejected`), `notes`, `processed_at`, `created_at`, `updated_at`
+

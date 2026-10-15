@@ -30,28 +30,28 @@ campus-esports-ethiopia/
 │   │   │   ├── Notifications/     # Multi-channel notification pipeline (In-app, push, email, SMS)
 │   │   │   ├── Moderation/        # Reports, Sanctions (warn, mute, suspend, ban), Audit logging
 │   │   │   ├── Tournaments/       # Deterministic Brackets, Match Rooms, Overrides, Disputes, Anti-Fraud, Rankings (Phase 3)
-│   │   │   ├── Ticketing/         # Orders, Offline-ready Signed QR Tokens, Scanners (Phase 4)
-│   │   │   ├── Payments/          # Telebirr, Chapa, M-Pesa abstractions (Phase 4)
-│   │   │   ├── Venues/            # Gaming zones, Facilities, Check-ins
+│   │   │   ├── Venues/            # Gaming lounges, LAN arenas, Haversine discovery, Reviews, Staff, Analytics (Phase 4)
+│   │   │   ├── Ticketing/         # Inventory row-locking, HMAC-SHA256 signed QR entry, Gate scanners, Offline sync (Phase 4)
+│   │   │   ├── Payments/          # Telebirr, Chapa, M-Pesa, Card, Bank, Idempotent webhooks, Refunds, Payouts (Phase 4)
 │   │   │   ├── Education/         # Digital literacy courses, Quizzes, Certificates
 │   │   │   └── Sponsorship/       # Packages, Deliverables, Brand reports
 │   │   ├── Http/
 │   │   │   ├── Controllers/Api/   # REST API Controllers (v1)
-│   │   │   ├── Controllers/Web/   # Inertia Web Controllers (Feed, Teams, Communities, Tournaments, Rankings, Mod Queue)
+│   │   │   ├── Controllers/Web/   # Inertia Web Controllers (Feed, Teams, Communities, Tournaments, Rankings, Venues, Tickets, Scanner, Reports)
 │   │   │   ├── Requests/          # Form Request Validators with Policy authorizations
-│   │   │   ├── Resources/         # Standardized API Resources (Room credentials privacy gated)
+│   │   │   ├── Resources/         # Standardized API Resources (Room credentials privacy gated, Signed QR tokens)
 │   │   │   └── Middleware/        # Inertia, RBAC, Rate-limiters
 │   ├── database/
-│   │   ├── migrations/            # 36 Core Domain Migrations (PostgreSQL/MySQL/SQLite)
+│   │   ├── migrations/            # 38 Core Domain Migrations (PostgreSQL/MySQL/SQLite)
 │   │   └── seeders/               # 9 Roles, Admin, Organizer, Player, Core Games
 │   ├── resources/
 │   │   ├── js/                    # React 19 + Inertia + TypeScript Frontend
 │   │   │   ├── components/ui/     # Accessible base component library (WCAG 2.1 AA)
-│   │   │   ├── layouts/           # Responsive AppLayout with Tournaments, Rankings, Live Alerts
-│   │   │   ├── pages/             # Tournaments (Directory, Details, Manage Brackets), Rankings, Feed, Teams, Communities, Chat
+│   │   │   ├── layouts/           # Responsive AppLayout with Venues, Tickets, QR Gate Scanner
+│   │   │   ├── pages/             # Venues (Discovery & Profile), Events (Tickets Checkout), My Tickets (Signed QR), Gate Scanner (Offline Sync), Reports
 │   │   │   ├── hooks/             # useTranslation (EN/AM), useTheme (Dark/Light)
 │   │   │   └── i18n/              # English (`en.json`) and Amharic (`am.json`)
-│   └── tests/                     # 77 Pest Feature & Unit Tests (316 Assertions, 100% Green)
+│   └── tests/                     # 99 Pest Feature & Unit Tests (413 Assertions, 100% Green)
 ├── docs/                          # Architecture, API Documentation, Database Schema & Guides
 ├── docker/                        # Multi-stage Dockerfile and Nginx configuration
 ├── docker-compose.yml             # Full-stack Docker Compose environment

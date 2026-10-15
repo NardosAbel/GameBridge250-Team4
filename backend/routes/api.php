@@ -7,16 +7,20 @@ use App\Http\Controllers\Api\v1\ChatController;
 use App\Http\Controllers\Api\v1\CommentController;
 use App\Http\Controllers\Api\v1\CommunityController;
 use App\Http\Controllers\Api\V1\DisputeController;
+use App\Http\Controllers\Api\V1\EventController;
 use App\Http\Controllers\Api\V1\MatchController;
 use App\Http\Controllers\Api\v1\ModerationController;
 use App\Http\Controllers\Api\v1\NotificationController;
+use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\v1\PostController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\RankingController;
 use App\Http\Controllers\Api\v1\RecruitmentController;
 use App\Http\Controllers\Api\v1\SocialInteractionController;
 use App\Http\Controllers\Api\V1\TeamController;
+use App\Http\Controllers\Api\V1\TicketController;
 use App\Http\Controllers\Api\V1\TournamentController;
+use App\Http\Controllers\Api\V1\VenueController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -71,6 +75,16 @@ Route::prefix('v1')->group(function () {
     Route::get('/rankings', [RankingController::class, 'index']);
     Route::get('/rankings/leaderboards', [RankingController::class, 'leaderboards']);
     Route::get('/rankings/snapshots', [RankingController::class, 'snapshots']);
+
+    // Public Venue, Event & Ticketing Endpoints
+    Route::get('/venues', [VenueController::class, 'index']);
+    Route::get('/venues/{venue}', [VenueController::class, 'show']);
+    Route::get('/events', [EventController::class, 'index']);
+    Route::get('/events/{event}', [EventController::class, 'show']);
+    Route::get('/tickets/types', [TicketController::class, 'ticketTypes']);
+
+    // Public Payment Webhook
+    Route::post('/payments/webhook/{provider}', [PaymentController::class, 'webhook']);
 
     // Authenticated Routes (Sanctum)
     Route::middleware('auth:sanctum')->group(function () {
@@ -180,6 +194,43 @@ Route::prefix('v1')->group(function () {
         // Rankings & Snapshots
         Route::prefix('rankings')->group(function () {
             Route::post('/snapshot', [RankingController::class, 'snapshot']);
+        });
+
+        // Venues & Events Management
+        Route::prefix('venues')->group(function () {
+            Route::post('/', [VenueController::class, 'store']);
+            Route::put('/{venue}', [VenueController::class, 'update']);
+            Route::post('/{venue}/staff', [VenueController::class, 'assignStaff']);
+            Route::post('/{venue}/reviews', [VenueController::class, 'storeReview']);
+            Route::get('/{venue}/analytics', [VenueController::class, 'analytics']);
+        });
+
+        Route::prefix('events')->group(function () {
+            Route::post('/', [EventController::class, 'store']);
+            Route::put('/{event}', [EventController::class, 'update']);
+        });
+
+        // Ticketing Operations & Scanner Gate
+        Route::prefix('tickets')->group(function () {
+            Route::post('/types', [TicketController::class, 'storeTicketType']);
+            Route::post('/checkout', [TicketController::class, 'checkout']);
+            Route::get('/my-tickets', [TicketController::class, 'myTickets']);
+            Route::get('/reports', [TicketController::class, 'reports']);
+            Route::get('/reports/export', [TicketController::class, 'exportCsv']);
+            Route::post('/scan', [TicketController::class, 'scan']);
+            Route::post('/sync-scans', [TicketController::class, 'syncOfflineScans']);
+            Route::get('/{ticket}', [TicketController::class, 'showTicket']);
+            Route::post('/{ticket}/transfer', [TicketController::class, 'transfer']);
+        });
+
+        // Payments, Refunds & Organizer Payouts
+        Route::prefix('payments')->group(function () {
+            Route::post('/initiate', [PaymentController::class, 'initiate']);
+            Route::post('/{payment}/reconcile', [PaymentController::class, 'reconcile']);
+            Route::post('/orders/{order}/refund', [PaymentController::class, 'requestRefund']);
+            Route::post('/refunds/{refund}/process', [PaymentController::class, 'processRefund']);
+            Route::post('/payouts', [PaymentController::class, 'requestPayout']);
+            Route::post('/payouts/{payout}/process', [PaymentController::class, 'processPayout']);
         });
 
         // Audit Logs (Admin / Moderator only)

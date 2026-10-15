@@ -674,3 +674,206 @@ This document describes the REST API endpoints available in the Campus Esports E
   }
   ```
 
+---
+
+## 14. Venues & Arenas (`/api/v1/venues`)
+
+### Discover Venues
+- **Endpoint:** `GET /api/v1/venues`
+- **Auth:** Public
+- **Query Parameters:** `city`, `facilities`, `search`, `latitude`, `longitude`, `radius_km`
+- **Description:** Returns gaming lounges, LAN cafes, and arenas. If coordinates are provided, calculates Haversine distance and orders by proximity.
+
+### Get Venue Details
+- **Endpoint:** `GET /api/v1/venues/{venue}`
+- **Auth:** Public
+- **Description:** Returns venue specifications, photos, opening hours, pricing, reviews, and upcoming events.
+
+### Create Venue Profile
+- **Endpoint:** `POST /api/v1/venues`
+- **Auth:** `auth:sanctum` (Organizer / Venue Owner)
+
+### Assign Venue Staff
+- **Endpoint:** `POST /api/v1/venues/{venue}/staff`
+- **Auth:** `auth:sanctum` (Venue Owner / Manager)
+- **Request Body:**
+  ```json
+  {
+    "user_id": 12,
+    "role": "scanner"
+  }
+  ```
+
+### Submit Venue Review
+- **Endpoint:** `POST /api/v1/venues/{venue}/reviews`
+- **Auth:** `auth:sanctum`
+- **Request Body:**
+  ```json
+  {
+    "rating": 5,
+    "comment": "Top-tier fiber connection and PS5 setups!"
+  }
+  ```
+
+### Venue Analytics
+- **Endpoint:** `GET /api/v1/venues/{venue}/analytics`
+- **Auth:** `auth:sanctum` (Venue Staff / Manager)
+
+---
+
+## 15. Events (`/api/v1/events`)
+
+### List Events
+- **Endpoint:** `GET /api/v1/events`
+- **Auth:** Public
+- **Query Parameters:** `venue_id`, `event_type`, `status`
+
+### Get Event Details
+- **Endpoint:** `GET /api/v1/events/{event}`
+- **Auth:** Public
+
+### Create Event
+- **Endpoint:** `POST /api/v1/events`
+- **Auth:** `auth:sanctum` (Organizer / Venue Manager)
+
+---
+
+## 16. Ticketing & Gate Entry (`/api/v1/tickets`)
+
+### List Ticket Tiers
+- **Endpoint:** `GET /api/v1/tickets/types`
+- **Auth:** Public
+- **Query Parameters:** `event_id`, `tournament_id`
+
+### Create Ticket Tier
+- **Endpoint:** `POST /api/v1/tickets/types`
+- **Auth:** `auth:sanctum` (Event Organizer / Venue Manager)
+
+### Checkout Ticket Order
+- **Endpoint:** `POST /api/v1/tickets/checkout`
+- **Auth:** `auth:sanctum`
+- **Request Body:**
+  ```json
+  {
+    "items": [
+      { "ticket_type_id": 1, "quantity": 2 }
+    ],
+    "promo_code": "STUDENT25"
+  }
+  ```
+- **Description:** Uses database pessimistic row-locking (`lockForUpdate()`) inside transactions to completely prevent ticket overselling.
+
+### Get My Tickets
+- **Endpoint:** `GET /api/v1/tickets/my-tickets`
+- **Auth:** `auth:sanctum`
+- **Description:** Returns attendee passes with HMAC-SHA256 signed QR payloads.
+
+### Transfer Ticket
+- **Endpoint:** `POST /api/v1/tickets/{ticket}/transfer`
+- **Auth:** `auth:sanctum` (Ticket Holder)
+- **Request Body:**
+  ```json
+  {
+    "recipient_email": "friend@university.edu.et"
+  }
+  ```
+
+### Real-Time Gate Scan Validation
+- **Endpoint:** `POST /api/v1/tickets/scan`
+- **Auth:** `auth:sanctum` (Authorized Scanner / Staff)
+- **Request Body:**
+  ```json
+  {
+    "qr_payload": "{\"ref\":\"<uuid>\",\"sig\":\"<signature>\"}",
+    "venue_id": 1,
+    "event_id": 1,
+    "device_id": "scanner-01"
+  }
+  ```
+- **Responses:**
+  - `200 OK`: Valid pass, checked in.
+  - `409 Conflict`: Duplicate scan rejection.
+  - `422 Unprocessable`: Wrong event, expired, revoked, or invalid signature.
+
+### Sync Offline Scans (Batch)
+- **Endpoint:** `POST /api/v1/tickets/sync-scans`
+- **Auth:** `auth:sanctum` (Authorized Scanner / Staff)
+- **Request Body:**
+  ```json
+  {
+    "scans": [
+      {
+        "qr_payload": "{\"ref\":\"<uuid>\",\"sig\":\"<signature>\"}",
+        "device_id": "offline-tablet-01",
+        "scanned_at": "2026-10-15T10:00:00Z"
+      }
+    ]
+  }
+  ```
+
+### Ticketing & Attendance Reports
+- **Endpoint:** `GET /api/v1/tickets/reports`
+- **Auth:** `auth:sanctum` (Organizer / Admin)
+- **Query Parameters:** `event_id`, `tournament_id`
+
+### Export Attendance CSV
+- **Endpoint:** `GET /api/v1/tickets/reports/export`
+- **Auth:** `auth:sanctum` (Organizer / Admin)
+
+---
+
+## 17. Local Payments, Webhooks, Refunds & Payouts (`/api/v1/payments`)
+
+### Initiate Local Payment
+- **Endpoint:** `POST /api/v1/payments/initiate`
+- **Auth:** `auth:sanctum`
+- **Request Body:**
+  ```json
+  {
+    "order_id": 1,
+    "provider": "telebirr"
+  }
+  ```
+- *(Supported providers: `telebirr`, `chapa`, `mpesa`, `card`, `bank_transfer`, `manual`)*
+
+### Payment Webhook (Idempotent)
+- **Endpoint:** `POST /api/v1/payments/webhook/{provider}`
+- **Auth:** Public (Signature Verified)
+- **Description:** Verifies webhook signature, acknowledges duplicate calls idempotently without double-issuing tickets, and automatically marks order as paid and issues signed QR tickets.
+
+### Request Refund
+- **Endpoint:** `POST /api/v1/payments/orders/{order}/refund`
+- **Auth:** `auth:sanctum` (Order Owner)
+- **Request Body:**
+  ```json
+  {
+    "amount": 200.00,
+    "reason": "Exam conflict",
+    "reason_category": "attendee_unavailable"
+  }
+  ```
+
+### Process Refund
+- **Endpoint:** `POST /api/v1/payments/refunds/{refund}/process`
+- **Auth:** `auth:sanctum` (Organizer / Venue Manager / Admin)
+- **Request Body:**
+  ```json
+  {
+    "approve": true
+  }
+  ```
+- *Revokes tickets immediately upon refund approval.*
+
+### Request Organizer Payout
+- **Endpoint:** `POST /api/v1/payments/payouts`
+- **Auth:** `auth:sanctum` (Organizer)
+- **Request Body:**
+  ```json
+  {
+    "gross_amount": 5000.00,
+    "provider": "cbe",
+    "account_number": "1000123456789"
+  }
+  ```
+- *Transparently deducts standard 5% platform fee.*
+

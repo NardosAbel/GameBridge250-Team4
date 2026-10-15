@@ -99,5 +99,30 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Rankings/Index');
     })->name('rankings.index');
 
+    // Phase 4 Venues, Events, Ticketing & QR Gate Pages
+    Route::get('/venues', function () {
+        return Inertia::render('Venues/Index');
+    })->name('venues.index');
+
+    Route::get('/venues/{id}', function ($id) {
+        return Inertia::render('Venues/Show', ['venueId' => (int) $id]);
+    })->name('venues.show');
+
+    Route::get('/events/{id}', function ($id) {
+        return Inertia::render('Events/Show', ['eventId' => (int) $id]);
+    })->name('events.show');
+
+    Route::get('/my-tickets', function () {
+        return Inertia::render('Tickets/MyTickets');
+    })->name('tickets.my-tickets');
+
+    Route::get('/scanner', function () {
+        return Inertia::render('Tickets/Scanner');
+    })->name('tickets.scanner');
+
+    Route::get('/ticketing/reports', function () {
+        return Inertia::render('Tickets/Reports');
+    })->name('tickets.reports');
+
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });

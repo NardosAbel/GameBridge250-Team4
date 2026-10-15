@@ -19,6 +19,8 @@ import {
     MessageSquare,
     Bell,
     ShieldAlert,
+    Ticket,
+    QrCode,
 } from 'lucide-react';
 import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
 import { ThemeSwitcher } from '../components/ui/ThemeSwitcher';
@@ -134,8 +136,30 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                             <UserPlus className="w-4 h-4 text-pink-400" />
                             Recruitment
                         </Link>
+                        <Link
+                            href="/venues"
+                            className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
+                        >
+                            <Building2 className="w-4 h-4 text-emerald-400" />
+                            Venues
+                        </Link>
                         {auth.user && (
                             <>
+                                <Link
+                                    href="/my-tickets"
+                                    className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
+                                >
+                                    <Ticket className="w-4 h-4 text-amber-400" />
+                                    Tickets
+                                </Link>
+                                <Link
+                                    href="/scanner"
+                                    className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
+                                    title="Gate QR Scanner"
+                                >
+                                    <QrCode className="w-4 h-4 text-teal-400" />
+                                    Gate Scan
+                                </Link>
                                 <Link
                                     href="/chat"
                                     className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
@@ -269,15 +293,26 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                             onClick={() => setMobileMenuOpen(false)}
                             className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800"
                         >
-                            {t('common.venues')}
+                            Venues
                         </Link>
-                        <Link
-                            href="/learning"
-                            onClick={() => setMobileMenuOpen(false)}
-                            className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800"
-                        >
-                            {t('common.learning')}
-                        </Link>
+                        {auth.user && (
+                            <>
+                                <Link
+                                    href="/my-tickets"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800"
+                                >
+                                    My Tickets
+                                </Link>
+                                <Link
+                                    href="/scanner"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800"
+                                >
+                                    Gate QR Scanner
+                                </Link>
+                            </>
+                        )}
 
                         <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
                             <ThemeSwitcher />

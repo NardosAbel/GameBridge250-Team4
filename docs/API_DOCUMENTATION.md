@@ -467,3 +467,210 @@ This document describes the REST API endpoints available in the Campus Esports E
   ```
   *(Supported actions: `warn`, `mute`, `suspend`, `ban`, `delete_content`, `dismiss`)*
   *Generates an immutable audit log entry in `audit_logs`.*
+
+---
+
+## 10. Tournament Engine (`/api/v1/tournaments`)
+
+### List Tournaments
+- **Endpoint:** `GET /api/v1/tournaments`
+- **Auth:** Public
+- **Query Filters:** `status`, `game_id`, `format`, `platform`, `region`, `search`, `page`
+
+### View Tournament Details & Brackets
+- **Endpoint:** `GET /api/v1/tournaments/{tournament}`
+- **Auth:** Public
+- **Response:** Tournament metadata, approved participants, interactive bracket nodes, matches, standings, and active staff.
+
+### Create Tournament
+- **Endpoint:** `POST /api/v1/tournaments`
+- **Auth:** `auth:sanctum` (Verified Organizer / Admin)
+- **Request Body:**
+  ```json
+  {
+    "title": "Ethiopian Collegiate Masters 2026",
+    "game_id": 1,
+    "format": "single_elimination",
+    "match_format": "bo3",
+    "platform": "pc",
+    "region": "Addis Ababa",
+    "capacity": 16,
+    "entry_type": "free",
+    "rules": "Standard esports rules apply. 15-minute disqualification timer.",
+    "starts_at": "2026-11-01T10:00:00Z",
+    "eligibility_rules": {
+      "allowed_universities": ["Addis Ababa University", "HilCoE"],
+      "require_student_id": true
+    }
+  }
+  ```
+
+### Update Tournament Lifecycle Status
+- **Endpoint:** `PUT /api/v1/tournaments/{tournament}/status`
+- **Auth:** `auth:sanctum` (Organizer / Admin)
+- **Request Body:**
+  ```json
+  {
+    "status": "registration_open"
+  }
+  ```
+  *(Supported transitions: `draft` -> `published` -> `registration_open` -> `registration_closed` -> `check_in` -> `live` -> `completed` / `cancelled` -> `archived`)*
+
+### Register for Tournament
+- **Endpoint:** `POST /api/v1/tournaments/{tournament}/register`
+- **Auth:** `auth:sanctum` (Enforces university, student verification, platform, and capacity checks)
+- **Request Body (Solo):** `{}`
+- **Request Body (Team):**
+  ```json
+  {
+    "team_id": 3
+  }
+  ```
+
+### Tournament Check-In
+- **Endpoint:** `POST /api/v1/tournaments/{tournament}/check-in`
+- **Auth:** `auth:sanctum` (Registered participant or Organizer override)
+
+### Update Participant Seeding
+- **Endpoint:** `PUT /api/v1/tournaments/{tournament}/seeding`
+- **Auth:** `auth:sanctum` (Organizer / Staff)
+- **Request Body:**
+  ```json
+  {
+    "seeds": {
+      "12": 1,
+      "15": 2
+    }
+  }
+  ```
+
+### Generate Brackets
+- **Endpoint:** `POST /api/v1/tournaments/{tournament}/bracket`
+- **Auth:** `auth:sanctum` (Organizer / Staff)
+- **Description:** Generates deterministic bracket nodes (Single Elim, Double Elim, Round Robin, Swiss, or Group Stage + Knockout) with power-of-2 seed placement, automatic bye advancement, and transactional database integrity.
+
+### Assign Tournament Staff
+- **Endpoint:** `POST /api/v1/tournaments/{tournament}/staff`
+- **Auth:** `auth:sanctum` (Organizer / Super Admin)
+- **Request Body:**
+  ```json
+  {
+    "user_id": 9,
+    "role": "referee"
+  }
+  ```
+  *(Roles: `admin`, `co_organizer`, `referee`, `scorekeeper`, `caster`)*
+
+---
+
+## 11. Matches & Game Rooms (`/api/v1/matches`)
+
+### View Match Details
+- **Endpoint:** `GET /api/v1/matches/{match}`
+- **Auth:** Public / Authenticated.
+- **Privacy Security:** Restricted match room credentials (`room_id`, `room_password`, `room_server`, `room_instructions`) are returned **only** to the playing participants, assigned referees, tournament staff, and administrators. Unauthorized users receive `null`.
+
+### Match Check-In / Ready-Up
+- **Endpoint:** `POST /api/v1/matches/{match}/check-in`
+- **Auth:** `auth:sanctum` (Match Participant)
+- **Description:** Sets participant ready flag. When both participants ready up, match automatically transitions to `live`.
+
+### Update Game Room Credentials
+- **Endpoint:** `PUT /api/v1/matches/{match}/room`
+- **Auth:** `auth:sanctum` (Organizer, Referee, or Staff)
+- **Request Body:**
+  ```json
+  {
+    "room_id": "LOBBY_99182",
+    "room_password": "secure_pw_2026",
+    "room_server": "Africa-East",
+    "room_instructions": "Lobby created by referee. Join within 10 minutes."
+  }
+  ```
+
+### Submit Match Result
+- **Endpoint:** `POST /api/v1/matches/{match}/result`
+- **Auth:** `auth:sanctum` (Match Captain, Organizer, or Referee)
+- **Request Body:**
+  ```json
+  {
+    "participant1_score": 2,
+    "participant2_score": 1,
+    "winner_id": 4,
+    "evidence": [
+      {
+        "type": "screenshot",
+        "url": "https://s3.campus-esports.et/evidence/match_12_score.png",
+        "description": "Final scoreboard screenshot"
+      }
+    ]
+  }
+  ```
+
+### Confirm Match Result
+- **Endpoint:** `POST /api/v1/matches/{match}/confirm`
+- **Auth:** `auth:sanctum` (Opponent Captain, Referee, or Organizer)
+- **Description:** Confirms match score, advances winner to downstream bracket node, and triggers placement calculations if final match.
+
+### Organizer Result Override
+- **Endpoint:** `POST /api/v1/matches/{match}/override`
+- **Auth:** `auth:sanctum` (Organizer / Referee / Admin)
+- **Description:** Overrules match score and winner with cascading downstream invalidation and recalculation.
+
+---
+
+## 12. Disputes & Appeals (`/api/v1/disputes`)
+
+### Open Dispute
+- **Endpoint:** `POST /api/v1/matches/{match}/disputes`
+- **Auth:** `auth:sanctum` (Match Participant)
+- **Request Body:**
+  ```json
+  {
+    "reason": "Opponent used illegal ringers on roster.",
+    "evidence_urls": ["https://s3.campus-esports.et/evidence/dispute_proof.png"]
+  }
+  ```
+  *Pauses downstream bracket advancement and notifies tournament staff.*
+
+### Resolve Dispute
+- **Endpoint:** `POST /api/v1/disputes/{dispute}/resolve`
+- **Auth:** `auth:sanctum` (Organizer, Referee, or Admin)
+- **Request Body:**
+  ```json
+  {
+    "action_taken": "overturn_result",
+    "participant1_score": 2,
+    "participant2_score": 0,
+    "winner_id": 5,
+    "resolution_notes": "Official review confirms player substitution violation. Match overturned."
+  }
+  ```
+  *(Supported actions: `confirm_result`, `overturn_result`, `rematch`, `disqualify_participant`)*
+
+---
+
+## 13. Rankings & Leaderboards (`/api/v1/rankings`)
+
+### View Leaderboards
+- **Endpoint:** `GET /api/v1/rankings`
+- **Auth:** Public
+- **Query Filters:** `game_id`, `season_id`, `page`
+
+### View Ranking Snapshots
+- **Endpoint:** `GET /api/v1/rankings/snapshots`
+- **Auth:** Public
+- **Query Filters:** `game_id`, `season_id`
+
+### Capture Ranking Snapshot
+- **Endpoint:** `POST /api/v1/rankings/snapshots`
+- **Auth:** `auth:sanctum` (Admin / Organizer)
+- **Request Body:**
+  ```json
+  {
+    "game_id": 1,
+    "season_id": 1,
+    "type": "seasonal"
+  }
+  ```
+

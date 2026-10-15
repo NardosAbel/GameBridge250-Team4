@@ -16,7 +16,6 @@ An integrated gaming, esports, and digital-awareness platform for Ethiopian univ
 
 Built as a **Modular Monolith** adhering to [.cursor/rules/project.mdc](file:///.cursor/rules/project.mdc) and specifications in `/docs`:
 
-```text
 campus-esports-ethiopia/
 ├── backend/                       # Laravel backend modular application
 │   ├── app/
@@ -30,29 +29,29 @@ campus-esports-ethiopia/
 │   │   │   ├── Chat/              # Direct, Team, and Community messaging with @mentions
 │   │   │   ├── Notifications/     # Multi-channel notification pipeline (In-app, push, email, SMS)
 │   │   │   ├── Moderation/        # Reports, Sanctions (warn, mute, suspend, ban), Audit logging
-│   │   │   ├── Tournaments/       # Brackets, Matches, Results, Disputes, Rankings (Phase 3)
-│   │   │   ├── Ticketing/         # Orders, Offline-ready Signed QR Tokens, Scanners (Phase 3)
-│   │   │   ├── Payments/          # Telebirr, Chapa, M-Pesa abstractions (Phase 3)
+│   │   │   ├── Tournaments/       # Deterministic Brackets, Match Rooms, Overrides, Disputes, Anti-Fraud, Rankings (Phase 3)
+│   │   │   ├── Ticketing/         # Orders, Offline-ready Signed QR Tokens, Scanners (Phase 4)
+│   │   │   ├── Payments/          # Telebirr, Chapa, M-Pesa abstractions (Phase 4)
 │   │   │   ├── Venues/            # Gaming zones, Facilities, Check-ins
 │   │   │   ├── Education/         # Digital literacy courses, Quizzes, Certificates
 │   │   │   └── Sponsorship/       # Packages, Deliverables, Brand reports
 │   │   ├── Http/
 │   │   │   ├── Controllers/Api/   # REST API Controllers (v1)
-│   │   │   ├── Controllers/Web/   # Inertia Web Controllers (Feed, Teams, Communities, Recruitment, Chat, Alerts, Mod Queue)
+│   │   │   ├── Controllers/Web/   # Inertia Web Controllers (Feed, Teams, Communities, Tournaments, Rankings, Mod Queue)
 │   │   │   ├── Requests/          # Form Request Validators with Policy authorizations
-│   │   │   ├── Resources/         # Standardized API Resources
+│   │   │   ├── Resources/         # Standardized API Resources (Room credentials privacy gated)
 │   │   │   └── Middleware/        # Inertia, RBAC, Rate-limiters
 │   ├── database/
-│   │   ├── migrations/            # 34 Core Domain Migrations (PostgreSQL/MySQL/SQLite)
+│   │   ├── migrations/            # 36 Core Domain Migrations (PostgreSQL/MySQL/SQLite)
 │   │   └── seeders/               # 9 Roles, Admin, Organizer, Player, Core Games
 │   ├── resources/
 │   │   ├── js/                    # React 19 + Inertia + TypeScript Frontend
 │   │   │   ├── components/ui/     # Accessible base component library (WCAG 2.1 AA)
-│   │   │   ├── layouts/           # Responsive AppLayout with Navigation, Live Alerts, Role Badges
-│   │   │   ├── pages/             # Feed, Teams, Communities, Recruitment, Chat, Notifications, Moderation Queue, Profile, Auth
+│   │   │   ├── layouts/           # Responsive AppLayout with Tournaments, Rankings, Live Alerts
+│   │   │   ├── pages/             # Tournaments (Directory, Details, Manage Brackets), Rankings, Feed, Teams, Communities, Chat
 │   │   │   ├── hooks/             # useTranslation (EN/AM), useTheme (Dark/Light)
 │   │   │   └── i18n/              # English (`en.json`) and Amharic (`am.json`)
-│   └── tests/                     # 45 Pest Feature & Unit Tests (196 Assertions)
+│   └── tests/                     # 77 Pest Feature & Unit Tests (316 Assertions, 100% Green)
 ├── docs/                          # Architecture, API Documentation, Database Schema & Guides
 ├── docker/                        # Multi-stage Dockerfile and Nginx configuration
 ├── docker-compose.yml             # Full-stack Docker Compose environment

@@ -303,3 +303,151 @@ Action logs tracking sanctions (warnings, mutes, suspensions, bans).
 - `duration_minutes`: Integer, Nullable
 - `expires_at`: Timestamp, Nullable
 - `created_at`, `updated_at`: Timestamps
+
+---
+
+## 8. Tournament Engine & Brackets
+
+### `tournaments`
+Core tournament entity governing metadata, format, eligibility rules, and lifecycle states.
+- `id`: Bigint unsigned, Primary Key
+- `uuid`: UUID, Unique
+- `organizer_id`: Foreign key -> `users(id)` ON DELETE CASCADE
+- `game_id`: Foreign key -> `games(id)` ON DELETE RESTRICT
+- `title`: Varchar(255)
+- `slug`: Varchar(255), Unique
+- `description`: Text, Nullable
+- `format`: Enum (`single_elimination`, `double_elimination`, `round_robin`, `swiss`, `group_stage_knockout`)
+- `match_format`: Enum (`bo1`, `bo3`, `bo5`), Default `'bo1'`
+- `entry_type`: Enum (`free`, `paid`, `invitation`, `qualification`), Default `'free'`
+- `status`: Enum (`draft`, `published`, `registration_open`, `registration_closed`, `check_in`, `live`, `completed`, `cancelled`, `archived`), Default `'draft'`
+- `capacity`: Integer unsigned, Default 16
+- `platform`: Varchar(50), Default `'all'` (e.g., `pc`, `mobile`, `console`)
+- `region`: Varchar(100), Default `'Ethiopia'`
+- `visibility`: Enum (`public`, `unlisted`, `private`), Default `'public'`
+- `banner_url`, `logo_url`: Varchar(255), Nullable
+- `theme_color`: Varchar(20), Nullable
+- `stream_url`: Varchar(255), Nullable (YouTube / Twitch livestream embed)
+- `rules`: LongText, Nullable
+- `prize_pool`: Decimal(12, 2), Default 0.00
+- `eligibility_rules`: JSON (allowed universities, regions, platforms, required student ID, min age)
+- `points_distribution`: JSON (points awarded per placement)
+- `settings`: JSON (invitation codes, auto-approval flags, check-in window duration)
+- `registration_start_at`, `registration_end_at`: Timestamps, Nullable
+- `check_in_start_at`, `check_in_end_at`: Timestamps, Nullable
+- `starts_at`, `ends_at`: Timestamps, Nullable
+- `created_at`, `updated_at`: Timestamps, SoftDeletes
+
+### `tournament_registrations`
+Participants (Solo or Teams) registered for a tournament with roster snapshot and fraud flags.
+- `id`: Bigint unsigned, Primary Key
+- `tournament_id`: Foreign key -> `tournaments(id)` ON DELETE CASCADE
+- `user_id`: Foreign key -> `users(id)` ON DELETE CASCADE, Nullable
+- `team_id`: Foreign key -> `teams(id)` ON DELETE CASCADE, Nullable
+- `status`: Enum (`pending`, `approved`, `rejected`, `checked_in`, `disqualified`), Default `'pending'`
+- `seed`: Integer unsigned, Nullable
+- `checked_in`: Boolean, Default `false`
+- `checked_in_at`: Timestamp, Nullable
+- `roster_snapshot`: JSON, Nullable (frozen copy of players and subs at registration lock)
+- `qualification_score`: Decimal(8, 2), Nullable
+- `invitation_code`: Varchar(100), Nullable
+- `anti_fraud_flags`: JSON, Nullable
+- `placement`: Integer unsigned, Nullable (e.g. 1st, 2nd, 3rd)
+- `points_awarded`: Integer unsigned, Default 0
+- `created_at`, `updated_at`: Timestamps
+
+### `tournament_staff`
+Appointed officials with scoped administrative permissions.
+- `id`: Bigint unsigned, Primary Key
+- `tournament_id`: Foreign key -> `tournaments(id)` ON DELETE CASCADE
+- `user_id`: Foreign key -> `users(id)` ON DELETE CASCADE
+- `role`: Enum (`admin`, `co_organizer`, `referee`, `scorekeeper`, `caster`)
+- `created_at`, `updated_at`: Timestamps
+
+### `brackets`
+Logical bracket stages (e.g., Upper Bracket, Lower Bracket, Group A, Playoffs).
+- `id`: Bigint unsigned, Primary Key
+- `tournament_id`: Foreign key -> `tournaments(id)` ON DELETE CASCADE
+- `name`: Varchar(255)
+- `stage`: Enum (`upper`, `lower`, `group_stage`, `playoffs`, `final`)
+- `type`: Enum (`elimination`, `round_robin`, `swiss`)
+- `status`: Enum (`pending`, `active`, `completed`), Default `'pending'`
+- `settings`: JSON, Nullable
+- `created_at`, `updated_at`: Timestamps
+
+### `bracket_nodes`
+Directed acyclic graph nodes linking upstream matches to downstream destination matches.
+- `id`: Bigint unsigned, Primary Key
+- `bracket_id`: Foreign key -> `brackets(id)` ON DELETE CASCADE
+- `round`: Integer unsigned
+- `node_order`: Integer unsigned
+- `group_number`: Integer unsigned, Nullable (used in group stage multi-round-robin)
+- `next_node_id`: Foreign key -> `bracket_nodes(id)` ON DELETE SET NULL, Nullable
+- `loser_next_node_id`: Foreign key -> `bracket_nodes(id)` ON DELETE SET NULL, Nullable (Double Elimination)
+- `is_bye`: Boolean, Default `false`
+- `created_at`, `updated_at`: Timestamps
+
+### `matches` (`TournamentMatch`)
+Discrete competitive fixtures between two participants with restricted room access.
+- `id`: Bigint unsigned, Primary Key
+- `uuid`: UUID, Unique
+- `tournament_id`: Foreign key -> `tournaments(id)` ON DELETE CASCADE
+- `bracket_node_id`: Foreign key -> `bracket_nodes(id)` ON DELETE SET NULL, Nullable
+- `round`: Integer unsigned, Default 1
+- `match_number`: Integer unsigned, Default 1
+- `match_format`: Enum (`bo1`, `bo3`, `bo5`), Default `'bo1'`
+- `participant1_id`, `participant2_id`: Foreign keys, Nullable
+- `participant1_type`, `participant2_type`: Enum (`user`, `team`), Nullable
+- `participant1_name`, `participant2_name`: Varchar(255), Nullable
+- `participant1_score`, `participant2_score`: Integer, Default 0
+- `participant1_checked_in`, `participant2_checked_in`: Boolean, Default `false`
+- `participant1_ready`, `participant2_ready`: Boolean, Default `false`
+- `winner_id`: Bigint unsigned, Nullable
+- `status`: Enum (`pending`, `ready`, `live`, `completed`, `disputed`, `cancelled`), Default `'pending'`
+- `is_bye`: Boolean, Default `false`
+- `room_id`: Varchar(255), Nullable (Restricted access)
+- `room_password`: Varchar(255), Nullable (Restricted access)
+- `room_server`: Varchar(100), Nullable (Restricted access)
+- `room_instructions`: Text, Nullable (Restricted access)
+- `referee_id`: Foreign key -> `users(id)` ON DELETE SET NULL, Nullable
+- `scheduled_at`, `completed_at`: Timestamps, Nullable
+- `created_at`, `updated_at`: Timestamps
+
+### `match_results` & `match_evidence`
+Submitted scores, opponent confirmations, and media proofs.
+- `match_results`: `id`, `match_id`, `submitted_by_id`, `confirmed_by_id`, `participant1_score`, `participant2_score`, `status` (`submitted`, `confirmed`, `disputed`, `overridden`), `notes`, `game_metadata` (JSON), `created_at`, `updated_at`
+- `match_evidence`: `id`, `match_result_id`, `user_id`, `type` (`screenshot`, `video_clip`, `match_id_code`), `url`, `description`, `created_at`, `updated_at`
+
+### `disputes`
+Protest workflow for disputed match outcomes.
+- `id`: Bigint unsigned, Primary Key
+- `match_id`: Foreign key -> `matches(id)` ON DELETE CASCADE
+- `raised_by_id`: Foreign key -> `users(id)` ON DELETE CASCADE
+- `assigned_to_id`: Foreign key -> `users(id)` ON DELETE SET NULL, Nullable
+- `reason`: Text
+- `evidence_urls`: JSON, Nullable
+- `status`: Enum (`open`, `under_review`, `resolved`, `rejected`), Default `'open'`
+- `action_taken`: Enum (`confirm_result`, `overturn_result`, `rematch`, `disqualify_participant`), Nullable
+- `resolution_notes`: Text, Nullable
+- `resolved_at`: Timestamp, Nullable
+- `created_at`, `updated_at`: Timestamps
+
+### `rankings` & `ranking_snapshots`
+Seasonal Elo ratings, cumulative points, and immutable leaderboard captures.
+- `rankings`: `id`, `season_id`, `game_id`, `user_id`, `team_id`, `points`, `rating`, `rank`, `created_at`, `updated_at`
+- `ranking_snapshots`: `id`, `season_id`, `game_id`, `snapshot_date`, `type` (`global`, `seasonal`, `monthly`), `rankings_data` (JSON array of top 100), `created_at`, `updated_at`
+
+### `tournament_fraud_signals`
+Automated flags detecting duplicate IPs, student ID reuse across accounts, and multi-team roster tampering.
+- `id`: Bigint unsigned, Primary Key
+- `tournament_id`: Foreign key -> `tournaments(id)` ON DELETE CASCADE
+- `registration_id`: Foreign key -> `tournament_registrations(id)` ON DELETE CASCADE
+- `user_id`: Foreign key -> `users(id)` ON DELETE SET NULL, Nullable
+- `signal_type`: Enum (`duplicate_ip`, `duplicate_student_id`, `multi_team_roster`, `rapid_submission`, `vpn_detected`)
+- `severity`: Enum (`low`, `medium`, `high`, `critical`)
+- `metadata`: JSON, Nullable
+- `is_reviewed`: Boolean, Default `false`
+- `reviewed_by`: Foreign key -> `users(id)` ON DELETE SET NULL, Nullable
+- `review_notes`: Text, Nullable
+- `created_at`, `updated_at`: Timestamps
+

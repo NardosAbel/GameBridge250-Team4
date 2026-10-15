@@ -100,6 +100,20 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                             Feed
                         </Link>
                         <Link
+                            href="/tournaments"
+                            className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
+                        >
+                            <Trophy className="w-4 h-4 text-amber-400" />
+                            Tournaments
+                        </Link>
+                        <Link
+                            href="/rankings"
+                            className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
+                        >
+                            <Gamepad2 className="w-4 h-4 text-purple-400" />
+                            Rankings
+                        </Link>
+                        <Link
                             href="/teams"
                             className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
                         >
@@ -235,6 +249,13 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                             className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800"
                         >
                             {t('common.tournaments')}
+                        </Link>
+                        <Link
+                            href="/rankings"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800"
+                        >
+                            Rankings
                         </Link>
                         <Link
                             href="/teams"

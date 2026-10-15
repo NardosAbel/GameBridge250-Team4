@@ -6,13 +6,17 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\v1\ChatController;
 use App\Http\Controllers\Api\v1\CommentController;
 use App\Http\Controllers\Api\v1\CommunityController;
+use App\Http\Controllers\Api\V1\DisputeController;
+use App\Http\Controllers\Api\V1\MatchController;
 use App\Http\Controllers\Api\v1\ModerationController;
 use App\Http\Controllers\Api\v1\NotificationController;
 use App\Http\Controllers\Api\v1\PostController;
 use App\Http\Controllers\Api\V1\ProfileController;
+use App\Http\Controllers\Api\V1\RankingController;
 use App\Http\Controllers\Api\v1\RecruitmentController;
 use App\Http\Controllers\Api\v1\SocialInteractionController;
-use App\Http\Controllers\Api\v1\TeamController;
+use App\Http\Controllers\Api\V1\TeamController;
+use App\Http\Controllers\Api\V1\TournamentController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -58,6 +62,15 @@ Route::prefix('v1')->group(function () {
     Route::get('/communities/{community}', [CommunityController::class, 'show']);
     Route::get('/communities/{community}/posts', [CommunityController::class, 'posts']);
     Route::get('/recruitment', [RecruitmentController::class, 'index']);
+
+    // Public Tournament Engine Endpoints
+    Route::get('/tournaments', [TournamentController::class, 'index']);
+    Route::get('/tournaments/{tournament}', [TournamentController::class, 'show']);
+    Route::get('/tournaments/{tournament}/participants', [TournamentController::class, 'participants']);
+    Route::get('/matches/{match}', [MatchController::class, 'show']);
+    Route::get('/rankings', [RankingController::class, 'index']);
+    Route::get('/rankings/leaderboards', [RankingController::class, 'leaderboards']);
+    Route::get('/rankings/snapshots', [RankingController::class, 'snapshots']);
 
     // Authenticated Routes (Sanctum)
     Route::middleware('auth:sanctum')->group(function () {
@@ -132,6 +145,41 @@ Route::prefix('v1')->group(function () {
             Route::post('/report', [ModerationController::class, 'report']);
             Route::get('/queue', [ModerationController::class, 'queue']);
             Route::post('/action', [ModerationController::class, 'action']);
+        });
+
+        // Tournament Engine Management
+        Route::prefix('tournaments')->group(function () {
+            Route::post('/', [TournamentController::class, 'store']);
+            Route::put('/{tournament}', [TournamentController::class, 'update']);
+            Route::delete('/{tournament}', [TournamentController::class, 'destroy']);
+            Route::put('/{tournament}/status', [TournamentController::class, 'updateStatus']);
+            Route::post('/{tournament}/register', [TournamentController::class, 'register']);
+            Route::post('/{tournament}/check-in', [TournamentController::class, 'checkIn']);
+            Route::put('/{tournament}/seeding', [TournamentController::class, 'updateSeeding']);
+            Route::post('/{tournament}/bracket', [TournamentController::class, 'generateBracket']);
+            Route::post('/{tournament}/staff', [TournamentController::class, 'assignStaff']);
+        });
+
+        // Matches, Check-in, Results & Overrides
+        Route::prefix('matches')->group(function () {
+            Route::post('/{match}/check-in', [MatchController::class, 'checkIn']);
+            Route::put('/{match}/room', [MatchController::class, 'updateRoom']);
+            Route::post('/{match}/result', [MatchController::class, 'submitResult']);
+            Route::post('/{match}/confirm', [MatchController::class, 'confirmResult']);
+            Route::post('/{match}/override', [MatchController::class, 'overrideResult']);
+            Route::post('/{match}/disputes', [DisputeController::class, 'store']);
+        });
+
+        // Disputes
+        Route::prefix('disputes')->group(function () {
+            Route::get('/', [DisputeController::class, 'index']);
+            Route::get('/{dispute}', [DisputeController::class, 'show']);
+            Route::post('/{dispute}/resolve', [DisputeController::class, 'resolve']);
+        });
+
+        // Rankings & Snapshots
+        Route::prefix('rankings')->group(function () {
+            Route::post('/snapshot', [RankingController::class, 'snapshot']);
         });
 
         // Audit Logs (Admin / Moderator only)

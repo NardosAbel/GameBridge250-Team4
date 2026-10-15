@@ -82,5 +82,22 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Moderation/Queue');
     })->name('moderation.queue');
 
+    // Phase 3 Tournament Engine Pages
+    Route::get('/tournaments', function () {
+        return Inertia::render('Tournaments/Index');
+    })->name('tournaments.index');
+
+    Route::get('/tournaments/{id}', function ($id) {
+        return Inertia::render('Tournaments/Show', ['tournamentId' => (int) $id]);
+    })->name('tournaments.show');
+
+    Route::get('/tournaments/{id}/manage', function ($id) {
+        return Inertia::render('Tournaments/Manage', ['tournamentId' => (int) $id]);
+    })->name('tournaments.manage');
+
+    Route::get('/rankings', function () {
+        return Inertia::render('Rankings/Index');
+    })->name('rankings.index');
+
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });

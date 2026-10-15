@@ -24,6 +24,7 @@ class Profile extends Model
         'university',
         'location',
         'school_id_number',
+        'student_id_number',
         'student_verified',
         'platform_handles',
         'preferred_games',
@@ -35,6 +36,16 @@ class Profile extends Model
         'achievements',
         'badges',
     ];
+
+    public function setStudentIdNumberAttribute(?string $value): void
+    {
+        $this->attributes['school_id_number'] = $value;
+    }
+
+    public function getStudentIdNumberAttribute(): ?string
+    {
+        return $this->attributes['school_id_number'] ?? null;
+    }
 
     protected static function booted(): void
     {

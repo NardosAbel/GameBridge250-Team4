@@ -10,6 +10,12 @@ use App\Domain\Recruitment\Models\RecruitmentPost;
 use App\Domain\Social\Models\Comment;
 use App\Domain\Social\Models\Post;
 use App\Domain\Teams\Models\Team;
+use App\Domain\Tournaments\Models\Dispute;
+use App\Domain\Tournaments\Models\Tournament;
+use App\Domain\Tournaments\Models\TournamentMatch;
+use App\Domain\Tournaments\Policies\DisputePolicy;
+use App\Domain\Tournaments\Policies\TournamentMatchPolicy;
+use App\Domain\Tournaments\Policies\TournamentPolicy;
 use App\Policies\ChatChannelPolicy;
 use App\Policies\CommentPolicy;
 use App\Policies\CommunityPolicy;
@@ -44,5 +50,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(ChatChannel::class, ChatChannelPolicy::class);
         Gate::policy(Profile::class, ProfilePolicy::class);
         Gate::policy(ModerationCase::class, ModerationPolicy::class);
+        Gate::policy(Tournament::class, TournamentPolicy::class);
+        Gate::policy(TournamentMatch::class, TournamentMatchPolicy::class);
+        Gate::policy(Dispute::class, DisputePolicy::class);
     }
 }

@@ -33,25 +33,25 @@ campus-esports-ethiopia/
 │   │   │   ├── Venues/            # Gaming lounges, LAN arenas, Haversine discovery, Reviews, Staff, Analytics (Phase 4)
 │   │   │   ├── Ticketing/         # Inventory row-locking, HMAC-SHA256 signed QR entry, Gate scanners, Offline sync (Phase 4)
 │   │   │   ├── Payments/          # Telebirr, Chapa, M-Pesa, Card, Bank, Idempotent webhooks, Refunds, Payouts (Phase 4)
-│   │   │   ├── Education/         # Digital literacy courses, Quizzes, Certificates
+│   │   │   ├── Education/         # 11 Digital Awareness Categories, Bilingual EN/AM, Quizzes, Certificates, Offline Bundles, University Paths, Campaigns (Phase 5)
 │   │   │   └── Sponsorship/       # Packages, Deliverables, Brand reports
 │   │   ├── Http/
 │   │   │   ├── Controllers/Api/   # REST API Controllers (v1)
-│   │   │   ├── Controllers/Web/   # Inertia Web Controllers (Feed, Teams, Communities, Tournaments, Rankings, Venues, Tickets, Scanner, Reports)
+│   │   │   ├── Controllers/Web/   # Inertia Web Controllers (Feed, Teams, Communities, Tournaments, Rankings, Venues, Tickets, Scanner, Reports, Education, Certificates)
 │   │   │   ├── Requests/          # Form Request Validators with Policy authorizations
-│   │   │   ├── Resources/         # Standardized API Resources (Room credentials privacy gated, Signed QR tokens)
+│   │   │   ├── Resources/         # Standardized API Resources (Room credentials privacy gated, Signed QR tokens, Sanitized quiz questions)
 │   │   │   └── Middleware/        # Inertia, RBAC, Rate-limiters
-│   ├── database/
-│   │   ├── migrations/            # 38 Core Domain Migrations (PostgreSQL/MySQL/SQLite)
-│   │   └── seeders/               # 9 Roles, Admin, Organizer, Player, Core Games
+│   │├── database/
+│   │   ├── migrations/            # 39 Core Domain Migrations (PostgreSQL/MySQL/SQLite)
+│   │   └── seeders/               # 9 Roles, Admin, Organizer, Player, Core Games, Badges & Awareness Courses
 │   ├── resources/
 │   │   ├── js/                    # React 19 + Inertia + TypeScript Frontend
 │   │   │   ├── components/ui/     # Accessible base component library (WCAG 2.1 AA)
-│   │   │   ├── layouts/           # Responsive AppLayout with Venues, Tickets, QR Gate Scanner
-│   │   │   ├── pages/             # Venues (Discovery & Profile), Events (Tickets Checkout), My Tickets (Signed QR), Gate Scanner (Offline Sync), Reports
+│   │   │   ├── layouts/           # Responsive AppLayout with Venues, Tickets, QR Gate Scanner, Learning Hub
+│   │   │   ├── pages/             # Venues, Tickets, Gate Scanner, Education (Catalog, Course Show, Lesson Viewer, Quiz Player, Dashboard, Certificate Verification, Campaigns)
 │   │   │   ├── hooks/             # useTranslation (EN/AM), useTheme (Dark/Light)
 │   │   │   └── i18n/              # English (`en.json`) and Amharic (`am.json`)
-│   └── tests/                     # 99 Pest Feature & Unit Tests (413 Assertions, 100% Green)
+│   └── tests/                     # 117 Pest Feature & Unit Tests (491 Assertions, 100% Green)
 ├── docs/                          # Architecture, API Documentation, Database Schema & Guides
 ├── docker/                        # Multi-stage Dockerfile and Nginx configuration
 ├── docker-compose.yml             # Full-stack Docker Compose environment

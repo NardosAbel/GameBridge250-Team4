@@ -877,3 +877,100 @@ This document describes the REST API endpoints available in the Campus Esports E
   ```
 - *Transparently deducts standard 5% platform fee.*
 
+---
+
+## 18. Digital Awareness and Learning Hub
+
+### List Courses
+- **Endpoint:** `GET /api/v1/courses`
+- **Auth:** Public
+- **Query Parameters:** `category`, `level`, `search`, `per_page`
+- **Supported Categories:** `online_safety`, `scam_awareness`, `cyberbullying_prevention`, `healthy_gaming`, `digital_literacy`, `ai_basics`, `coding`, `content_creation`, `esports_careers`, `data_skills`, `digital_entrepreneurship`
+
+### Get Course Details
+- **Endpoint:** `GET /api/v1/courses/{id}`
+- **Auth:** Public (Includes user enrollment progress if authenticated)
+
+### Enroll in Course
+- **Endpoint:** `POST /api/v1/education/courses/{id}/enroll`
+- **Auth:** `auth:sanctum`
+
+### View Lesson Content
+- **Endpoint:** `GET /api/v1/education/lessons/{id}`
+- **Auth:** `auth:sanctum` (or preview allowed)
+- **Description:** Returns article content, video player embed URL, PDF guide links, and interactive safety exercises.
+
+### Complete Lesson
+- **Endpoint:** `POST /api/v1/education/lessons/{id}/complete`
+- **Auth:** `auth:sanctum`
+- **Request Body:**
+  ```json
+  {
+    "time_spent_seconds": 180
+  }
+  ```
+- **Description:** Advances course enrollment percentage, increments daily learning streak, awards points, and checks achievement badges.
+
+### Download Offline Lesson Package
+- **Endpoint:** `GET /api/v1/education/lessons/{id}/offline-package`
+- **Auth:** `auth:sanctum`
+- **Description:** Bundles content, quizzes, and exercises for offline caching in low-connectivity campus environments.
+
+### Sync Offline Completed Lessons (Batch)
+- **Endpoint:** `POST /api/v1/education/lessons/sync-offline`
+- **Auth:** `auth:sanctum`
+- **Request Body:**
+  ```json
+  {
+    "lessons": [
+      { "lesson_id": 1, "time_spent_seconds": 300 }
+    ]
+  }
+  ```
+
+### Take Quiz Assessment
+- **Endpoint:** `GET /api/v1/education/quizzes/{id}`
+- **Auth:** `auth:sanctum`
+- **Description:** Returns sanitized assessment questions without leaking correct answer indices.
+
+### Submit Quiz Assessment
+- **Endpoint:** `POST /api/v1/education/quizzes/{id}/submit`
+- **Auth:** `auth:sanctum`
+- **Request Body:**
+  ```json
+  {
+    "answers": {
+      "q1": 1,
+      "q2": 1
+    }
+  }
+  ```
+- **Description:** Evaluates score, enforces max retries, issues official certificate if passing course requirements.
+
+### Public Certificate Verification
+- **Endpoint:** `GET /api/v1/certificates/verify/{code}`
+- **Auth:** Public
+- **Description:** Cryptographically verifies certificate authenticity by verification code or hash; returns student name, university, course, score, and issue date.
+
+### Learner Progress Dashboard
+- **Endpoint:** `GET /api/v1/education/dashboard`
+- **Auth:** `auth:sanctum`
+- **Description:** Returns current day streak, points, enrolled courses, unlocked badges, certificates wallet, and university-assigned learning paths.
+
+### List & Assign Learning Paths
+- **Endpoint:** `GET /api/v1/learning-paths` (Public)
+- **Endpoint:** `POST /api/v1/education/learning-paths/{id}/assign` (University Admin / School Admin / Super Admin)
+- **Request Body:**
+  ```json
+  {
+    "university_name": "Addis Ababa University",
+    "due_date": "2026-11-30T23:59:59Z"
+  }
+  ```
+
+### Awareness Campaigns & Engagement
+- **Endpoint:** `GET /api/v1/campaigns` (Public)
+- **Endpoint:** `GET /api/v1/campaigns/{id}` (Public - Records view count)
+- **Endpoint:** `POST /api/v1/campaigns/{id}/share` (Public - Records share event on Telegram, X, Facebook, Direct link)
+
+

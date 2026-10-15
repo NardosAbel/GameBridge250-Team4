@@ -124,5 +124,34 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Tickets/Reports');
     })->name('tickets.reports');
 
+    // Phase 5 Digital Awareness and Learning Hub
+    Route::get('/education', function () {
+        return Inertia::render('Education/Index');
+    })->name('education.index');
+
+    Route::get('/education/dashboard', function () {
+        return Inertia::render('Education/Dashboard');
+    })->name('education.dashboard');
+
+    Route::get('/education/courses/{id}', function ($id) {
+        return Inertia::render('Education/Show', ['courseId' => $id]);
+    })->name('education.course.show');
+
+    Route::get('/education/lessons/{id}', function ($id) {
+        return Inertia::render('Education/LessonShow', ['lessonId' => $id]);
+    })->name('education.lesson.show');
+
+    Route::get('/education/quizzes/{id}', function ($id) {
+        return Inertia::render('Education/QuizShow', ['quizId' => $id]);
+    })->name('education.quiz.show');
+
+    Route::get('/education/campaigns/{id}', function ($id) {
+        return Inertia::render('Education/Campaigns/Show', ['campaignId' => $id]);
+    })->name('education.campaign.show');
+
+    Route::get('/verify-certificate', function () {
+        return Inertia::render('Education/VerifyCertificate');
+    })->name('education.verify-certificate');
+
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });

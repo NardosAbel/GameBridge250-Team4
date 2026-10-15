@@ -143,6 +143,13 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                             <Building2 className="w-4 h-4 text-emerald-400" />
                             Venues
                         </Link>
+                        <Link
+                            href="/education"
+                            className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
+                        >
+                            <BookOpen className="w-4 h-4 text-indigo-400" />
+                            Learning Hub
+                        </Link>
                         {auth.user && (
                             <>
                                 <Link
@@ -294,6 +301,13 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                             className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800"
                         >
                             Venues
+                        </Link>
+                        <Link
+                            href="/education"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800"
+                        >
+                            Learning Hub
                         </Link>
                         {auth.user && (
                             <>

@@ -123,5 +123,7 @@ class DatabaseSeeder extends Seeder
                 ]
             );
         }
+
+        $this->call(EducationSeeder::class);
     }
 }

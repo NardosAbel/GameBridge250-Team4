@@ -601,3 +601,111 @@ Attendee refund approval workflows and organizer fee-transparent settlement payo
 - `refunds`: `id`, `uuid`, `payment_id`, `ticket_order_id`, `user_id` (Requester), `processed_by_id`, `amount`, `reason`, `reason_category` (`event_cancelled`, `event_rescheduled`, `attendee_unavailable`, `duplicate_purchase`, `other`), `status` (`pending`, `approved`, `rejected`, `completed`), `rejection_reason`, `processed_at`, `created_at`, `updated_at`
 - `payouts`: `id`, `uuid`, `user_id` (Organizer), `event_id`, `tournament_id`, `amount` (Net amount), `gross_amount`, `platform_fee` (5% transparent fee), `currency` (ETB), `provider` (`telebirr`, `cbe`, `awash`, `mpesa`), `account_number`, `status` (`pending`, `approved`, `processing`, `completed`, `rejected`), `notes`, `processed_at`, `created_at`, `updated_at`
 
+---
+
+## Phase 5: Digital Awareness and Learning Hub
+
+### `courses`
+Foundational and specialized courses across 11 digital awareness categories.
+- `id`: Bigint unsigned, Primary Key
+- `uuid`: UUID, Unique
+- `title`, `title_am`: Varchar(255) (Bilingual English & Amharic)
+- `slug`: Varchar(255), Unique
+- `description`, `description_am`: Text, Nullable
+- `cover_image`: Varchar(500), Nullable
+- `category`: Enum (`online_safety`, `scam_awareness`, `cyberbullying_prevention`, `healthy_gaming`, `digital_literacy`, `ai_basics`, `coding`, `content_creation`, `esports_careers`, `data_skills`, `digital_entrepreneurship`)
+- `level`: Enum (`beginner`, `intermediate`, `advanced`)
+- `instructor_id`: Foreign key -> `users(id)` ON DELETE SET NULL, Nullable
+- `status`: Enum (`draft`, `scheduled`, `published`, `archived`)
+- `is_published`: Boolean, Default `false`
+- `scheduled_for`: Timestamp, Nullable
+- `language_support`: JSON (`['en', 'am']`)
+- `estimated_duration_minutes`: Integer unsigned, Default 60
+- `total_points`: Integer unsigned, Default 100
+- `is_offline_available`: Boolean, Default `true`
+- `created_at`, `updated_at`: Timestamps
+
+### `course_modules`
+Curriculum module chapters grouping related lessons.
+- `id`: Bigint unsigned, Primary Key
+- `uuid`: UUID, Unique
+- `course_id`: Foreign key -> `courses(id)` ON DELETE CASCADE
+- `title`, `title_am`: Varchar(255)
+- `description`: Text, Nullable
+- `order`: Smallint unsigned, Default 1
+- `created_at`, `updated_at`: Timestamps
+
+### `lessons`
+Multi-format learning units supporting articles, videos, PDFs, and interactive exercises.
+- `id`: Bigint unsigned, Primary Key
+- `uuid`: UUID, Unique
+- `course_id`: Foreign key -> `courses(id)` ON DELETE CASCADE
+- `module_id`: Foreign key -> `course_modules(id)` ON DELETE SET NULL, Nullable
+- `title`, `title_am`: Varchar(255)
+- `slug`: Varchar(255)
+- `lesson_type`: Enum (`article`, `video`, `pdf`, `quiz`, `interactive`)
+- `content`, `content_am`: LongText, Nullable
+- `media_url`, `video_embed_url`, `pdf_url`: Varchar(500), Nullable
+- `interactive_payload`: JSON, Nullable
+- `order`: Smallint unsigned, Default 1
+- `duration_minutes`: Smallint unsigned, Default 15
+- `is_preview`: Boolean, Default `false`
+- `is_downloadable`: Boolean, Default `true`
+- `offline_package`: JSON, Nullable
+- `created_at`, `updated_at`: Timestamps
+
+### `quizzes` & `quiz_attempts`
+Assessments with bilingual questions, passing scores, and retries.
+- `quizzes`: `id`, `uuid`, `course_id`, `lesson_id`, `title`, `title_am`, `description`, `description_am`, `passing_score` (Default 70), `max_retries` (Default 3), `time_limit_minutes`, `questions` (JSON with English/Amharic options, correct answer index, explanations), `created_at`, `updated_at`
+- `quiz_attempts`: `id`, `quiz_id`, `user_id`, `score`, `passed`, `answers` (JSON), `attempt_number`, `completed_at`, `created_at`, `updated_at`
+
+### `certificates`
+Official cryptographically verified digital credentials.
+- `id`: Bigint unsigned, Primary Key
+- `uuid`: UUID, Unique
+- `user_id`: Foreign key -> `users(id)` ON DELETE CASCADE
+- `course_id`: Foreign key -> `courses(id)` ON DELETE CASCADE
+- `certificate_number`: Varchar(64), Unique (e.g. `CEE-CERT-2026-XXXXX`)
+- `verification_code`: Varchar(64), Unique (e.g. `CEE-XXXX-YYYY`)
+- `verification_hash`: Varchar(64), Unique (SHA-256 cryptographic hash)
+- `issued_at`: Timestamp
+- `metadata`: JSON (student name, university, course title, grade score, issuer signature)
+- `created_at`, `updated_at`: Timestamps
+
+### `course_enrollments` & `lesson_progress`
+Individual student tracking, resume capability, and course progress percentage.
+- `course_enrollments`: `id`, `uuid`, `user_id`, `course_id`, `status` (`active`, `completed`, `dropped`), `progress_percentage`, `last_accessed_lesson_id`, `started_at`, `completed_at`, `created_at`, `updated_at`
+- `lesson_progress`: `id`, `user_id`, `course_id`, `lesson_id`, `status` (`started`, `completed`), `last_position_seconds`, `time_spent_seconds`, `completed_at`, `created_at`, `updated_at`
+
+### `learning_streaks`, `learning_badges` & `user_badges`
+Gamification engine with daily active streaks, points, and achievement badges.
+- `learning_streaks`: `id`, `user_id` (Unique), `current_streak`, `longest_streak`, `last_activity_date`, `total_lessons_completed`, `total_quizzes_passed`, `total_points`, `created_at`, `updated_at`
+- `learning_badges`: `id`, `slug` (Unique), `name`, `name_am`, `description`, `description_am`, `icon`, `criteria_type`, `criteria_threshold`, `created_at`, `updated_at`
+- `user_badges`: `id`, `user_id`, `badge_id`, `awarded_at`, `created_at`, `updated_at`
+
+### `learning_paths` & `learning_path_assignments`
+University cohort curricula and assigned mandatory paths.
+- `learning_paths`: `id`, `uuid`, `title`, `title_am`, `slug`, `description`, `description_am`, `banner_url`, `institution_type` (`university`, `school`, `all`), `target_university`, `is_mandatory`, `deadline`, `created_by_id`, `is_published`, `created_at`, `updated_at`
+- `learning_path_courses`: `id`, `learning_path_id`, `course_id`, `order`, `created_at`, `updated_at`
+- `learning_path_assignments`: `id`, `uuid`, `learning_path_id`, `user_id`, `assigned_by_id`, `university_name`, `due_date`, `status` (`assigned`, `in_progress`, `completed`), `completed_at`, `created_at`, `updated_at`
+
+### `awareness_campaigns`
+High-impact national campaigns with articles, video blocks, infographic tips, shareable assets, and platform share tracking.
+- `id`: Bigint unsigned, Primary Key
+- `uuid`: UUID, Unique
+- `title`, `title_am`: Varchar(255)
+- `slug`: Varchar(255), Unique
+- `category`: Enum (matching 11 awareness categories)
+- `description`, `description_am`: Text, Nullable
+- `banner_url`: Varchar(500), Nullable
+- `content_blocks`: JSON (articles, video embeds, infographic tips)
+- `shareable_assets`: JSON (posters, social media card graphics)
+- `linked_quiz_id`, `linked_course_id`: Foreign keys, Nullable
+- `status`: Enum (`draft`, `scheduled`, `published`, `completed`)
+- `start_date`, `end_date`: Timestamps, Nullable
+- `target_institutions`: JSON (list of participating universities)
+- `analytics`: JSON (`views_count`, `shares_count`, `quiz_completions`, platforms breakdown)
+- `created_by_id`: Foreign key -> `users(id)` ON DELETE CASCADE
+- `created_at`, `updated_at`: Timestamps
+
+

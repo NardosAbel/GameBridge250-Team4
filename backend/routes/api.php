@@ -7,6 +7,13 @@ use App\Http\Controllers\Api\v1\ChatController;
 use App\Http\Controllers\Api\v1\CommentController;
 use App\Http\Controllers\Api\v1\CommunityController;
 use App\Http\Controllers\Api\V1\DisputeController;
+use App\Http\Controllers\Api\V1\Education\AwarenessCampaignController;
+use App\Http\Controllers\Api\V1\Education\CertificateController;
+use App\Http\Controllers\Api\V1\Education\CourseController;
+use App\Http\Controllers\Api\V1\Education\EducationDashboardController;
+use App\Http\Controllers\Api\V1\Education\LearningPathController;
+use App\Http\Controllers\Api\V1\Education\LessonController;
+use App\Http\Controllers\Api\V1\Education\QuizController;
 use App\Http\Controllers\Api\V1\EventController;
 use App\Http\Controllers\Api\V1\MatchController;
 use App\Http\Controllers\Api\v1\ModerationController;
@@ -85,6 +92,17 @@ Route::prefix('v1')->group(function () {
 
     // Public Payment Webhook
     Route::post('/payments/webhook/{provider}', [PaymentController::class, 'webhook']);
+
+    // Public Digital Awareness & Education Hub
+    Route::get('/courses', [CourseController::class, 'index']);
+    Route::get('/courses/{course}', [CourseController::class, 'show']);
+    Route::get('/learning-paths', [LearningPathController::class, 'index']);
+    Route::get('/learning-paths/{path}', [LearningPathController::class, 'show']);
+    Route::get('/campaigns', [AwarenessCampaignController::class, 'index']);
+    Route::get('/campaigns/{campaign}', [AwarenessCampaignController::class, 'show']);
+    Route::post('/campaigns/{campaign}/share', [AwarenessCampaignController::class, 'share']);
+    Route::get('/certificates/verify/{code}', [CertificateController::class, 'verify']);
+    Route::get('/certificates/{certificate}', [CertificateController::class, 'show']);
 
     // Authenticated Routes (Sanctum)
     Route::middleware('auth:sanctum')->group(function () {
@@ -231,6 +249,25 @@ Route::prefix('v1')->group(function () {
             Route::post('/refunds/{refund}/process', [PaymentController::class, 'processRefund']);
             Route::post('/payouts', [PaymentController::class, 'requestPayout']);
             Route::post('/payouts/{payout}/process', [PaymentController::class, 'processPayout']);
+        });
+
+        // Digital Awareness & Learning Hub
+        Route::prefix('education')->group(function () {
+            Route::get('/dashboard', [EducationDashboardController::class, 'index']);
+            Route::post('/courses', [CourseController::class, 'store']);
+            Route::post('/courses/{course}/enroll', [CourseController::class, 'enroll']);
+            Route::post('/courses/{course}/publish', [CourseController::class, 'publish']);
+            Route::get('/lessons/{lesson}', [LessonController::class, 'show']);
+            Route::post('/lessons/{lesson}/complete', [LessonController::class, 'complete']);
+            Route::get('/lessons/{lesson}/offline-package', [LessonController::class, 'offlinePackage']);
+            Route::post('/lessons/sync-offline', [LessonController::class, 'syncOffline']);
+            Route::get('/quizzes/{quiz}', [QuizController::class, 'show']);
+            Route::post('/quizzes/{quiz}/submit', [QuizController::class, 'submit']);
+            Route::get('/my-certificates', [CertificateController::class, 'myCertificates']);
+            Route::post('/learning-paths', [LearningPathController::class, 'store']);
+            Route::post('/learning-paths/{path}/assign', [LearningPathController::class, 'assign']);
+            Route::post('/campaigns', [AwarenessCampaignController::class, 'store']);
+            Route::get('/campaigns/{campaign}/analytics', [AwarenessCampaignController::class, 'analytics']);
         });
 
         // Audit Logs (Admin / Moderator only)

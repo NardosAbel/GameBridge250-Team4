@@ -4,6 +4,18 @@ namespace App\Providers;
 
 use App\Domain\Chat\Models\ChatChannel;
 use App\Domain\Communities\Models\Community;
+use App\Domain\Education\Models\AwarenessCampaign;
+use App\Domain\Education\Models\Certificate;
+use App\Domain\Education\Models\Course;
+use App\Domain\Education\Models\LearningPath;
+use App\Domain\Education\Models\Lesson;
+use App\Domain\Education\Models\Quiz;
+use App\Domain\Education\Policies\AwarenessCampaignPolicy;
+use App\Domain\Education\Policies\CertificatePolicy;
+use App\Domain\Education\Policies\CoursePolicy;
+use App\Domain\Education\Policies\LearningPathPolicy;
+use App\Domain\Education\Policies\LessonPolicy;
+use App\Domain\Education\Policies\QuizPolicy;
 use App\Domain\Moderation\Models\ModerationCase;
 use App\Domain\Payments\Models\Payment;
 use App\Domain\Payments\Models\Payout;
@@ -74,5 +86,11 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Payment::class, PaymentPolicy::class);
         Gate::policy(Refund::class, RefundPolicy::class);
         Gate::policy(Payout::class, PayoutPolicy::class);
+        Gate::policy(Course::class, CoursePolicy::class);
+        Gate::policy(Lesson::class, LessonPolicy::class);
+        Gate::policy(Quiz::class, QuizPolicy::class);
+        Gate::policy(Certificate::class, CertificatePolicy::class);
+        Gate::policy(LearningPath::class, LearningPathPolicy::class);
+        Gate::policy(AwarenessCampaign::class, AwarenessCampaignPolicy::class);
     }
 }

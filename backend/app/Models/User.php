@@ -11,6 +11,7 @@ use App\Domain\Social\Models\Follow;
 use App\Domain\Social\Models\Post;
 use App\Domain\Social\Models\UserBlock;
 use App\Domain\Social\Models\UserMute;
+use App\Domain\Sponsorship\Models\BrandProfile;
 use App\Domain\Teams\Models\TeamMember;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -126,5 +127,10 @@ class User extends Authenticatable
     public function isSuspended(): bool
     {
         return $this->status === UserStatusEnum::SUSPENDED;
+    }
+
+    public function brandProfiles(): HasMany
+    {
+        return $this->hasMany(BrandProfile::class, 'user_id');
     }
 }

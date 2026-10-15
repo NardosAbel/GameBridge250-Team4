@@ -153,5 +153,26 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Education/VerifyCertificate');
     })->name('education.verify-certificate');
 
+    // Phase 6 Sponsorship Marketplace, Creator Tools & Platform Analytics
+    Route::get('/sponsors', function () {
+        return Inertia::render('Sponsors/Index');
+    })->name('sponsors.index');
+
+    Route::get('/sponsors/dashboard', function () {
+        return Inertia::render('Sponsors/Dashboard');
+    })->name('sponsors.dashboard');
+
+    Route::get('/creator/dashboard', function () {
+        return Inertia::render('Creator/Dashboard');
+    })->name('creator.dashboard');
+
+    Route::get('/admin/dashboard', function () {
+        return Inertia::render('Admin/Dashboard');
+    })->name('admin.dashboard');
+
+    Route::get('/tournaments/{id}/prize-pool', function ($id) {
+        return Inertia::render('Tournaments/PrizePool', ['tournamentId' => (int) $id]);
+    })->name('tournaments.prize-pool');
+
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });

@@ -1,6 +1,9 @@
 <?php
 
 use App\Domain\Profiles\Models\Game;
+use App\Http\Controllers\Api\V1\Administration\AdminDashboardController;
+use App\Http\Controllers\Api\V1\Administration\CreatorAnalyticsController;
+use App\Http\Controllers\Api\V1\Administration\PlatformAnalyticsController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\v1\ChatController;
@@ -24,6 +27,11 @@ use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\RankingController;
 use App\Http\Controllers\Api\v1\RecruitmentController;
 use App\Http\Controllers\Api\v1\SocialInteractionController;
+use App\Http\Controllers\Api\V1\Sponsorship\BrandProfileController;
+use App\Http\Controllers\Api\V1\Sponsorship\DeliverableController;
+use App\Http\Controllers\Api\V1\Sponsorship\PrizePoolController;
+use App\Http\Controllers\Api\V1\Sponsorship\SponsorshipController;
+use App\Http\Controllers\Api\V1\Sponsorship\SponsorshipPackageController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\TicketController;
 use App\Http\Controllers\Api\V1\TournamentController;
@@ -103,6 +111,13 @@ Route::prefix('v1')->group(function () {
     Route::post('/campaigns/{campaign}/share', [AwarenessCampaignController::class, 'share']);
     Route::get('/certificates/verify/{code}', [CertificateController::class, 'verify']);
     Route::get('/certificates/{certificate}', [CertificateController::class, 'show']);
+
+    // Public Sponsorship & Prize Pool Endpoints
+    Route::get('/sponsors/brands', [BrandProfileController::class, 'index']);
+    Route::get('/sponsors/brands/{brandProfile}', [BrandProfileController::class, 'show']);
+    Route::get('/sponsors/packages', [SponsorshipPackageController::class, 'index']);
+    Route::get('/sponsors/packages/{sponsorshipPackage}', [SponsorshipPackageController::class, 'show']);
+    Route::get('/tournaments/{tournament}/prize-pool', [PrizePoolController::class, 'progress']);
 
     // Authenticated Routes (Sanctum)
     Route::middleware('auth:sanctum')->group(function () {
@@ -273,6 +288,41 @@ Route::prefix('v1')->group(function () {
         // Audit Logs (Admin / Moderator only)
         Route::middleware(['permission:audit_logs.view'])->group(function () {
             Route::get('/audit-logs', [AuditLogController::class, 'index']);
+        });
+
+        // Phase 6: Sponsorship Marketplace & Brand Deals
+        Route::prefix('sponsors')->group(function () {
+            Route::post('/brands', [BrandProfileController::class, 'store']);
+            Route::put('/brands/{brandProfile}', [BrandProfileController::class, 'update']);
+            Route::post('/packages', [SponsorshipPackageController::class, 'store']);
+        });
+
+        Route::prefix('sponsorships')->group(function () {
+            Route::get('/', [SponsorshipController::class, 'index']);
+            Route::post('/apply', [SponsorshipController::class, 'apply']);
+            Route::get('/{sponsorship}', [SponsorshipController::class, 'show']);
+            Route::post('/{sponsorship}/review', [SponsorshipController::class, 'review']);
+            Route::get('/{sponsorship}/report', [SponsorshipController::class, 'report']);
+            Route::get('/{sponsorship}/report/export', [SponsorshipController::class, 'exportReport']);
+            Route::post('/deliverables/{deliverable}/evidence', [DeliverableController::class, 'submitEvidence']);
+            Route::post('/deliverables/{deliverable}/verify', [DeliverableController::class, 'verify']);
+        });
+
+        Route::post('/tournaments/{tournament}/prize-pool/contribute', [PrizePoolController::class, 'contribute']);
+
+        // Phase 6: Creator Tools & Performance Insights
+        Route::prefix('creator')->group(function () {
+            Route::get('/insights', [CreatorAnalyticsController::class, 'insights']);
+        });
+
+        // Phase 6: Platform Analytics & System Administration
+        Route::prefix('admin')->group(function () {
+            Route::get('/overview', [AdminDashboardController::class, 'overview']);
+            Route::get('/analytics', [PlatformAnalyticsController::class, 'metrics']);
+            Route::get('/analytics/export', [PlatformAnalyticsController::class, 'exportCsv']);
+            Route::get('/feature-flags', [AdminDashboardController::class, 'featureFlags']);
+            Route::put('/feature-flags/{key}', [AdminDashboardController::class, 'toggleFlag']);
+            Route::get('/system-health', [AdminDashboardController::class, 'systemHealth']);
         });
     });
 });

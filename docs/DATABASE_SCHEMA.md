@@ -708,4 +708,125 @@ High-impact national campaigns with articles, video blocks, infographic tips, sh
 - `created_by_id`: Foreign key -> `users(id)` ON DELETE CASCADE
 - `created_at`, `updated_at`: Timestamps
 
+---
+
+## 7. Sponsorship Marketplace, Creator Tools & Platform Analytics (Phase 6)
+
+### `brand_profiles`
+Verified corporate and brand sponsor accounts.
+- `id`: Bigint unsigned, Primary Key
+- `uuid`: UUID, Unique
+- `user_id`: Foreign key -> `users(id)` ON DELETE CASCADE
+- `company_name`: Varchar(255)
+- `slug`: Varchar(255), Unique
+- `tagline`: Varchar(255), Nullable
+- `description`: Text, Nullable
+- `industry`: Varchar(100)
+- `logo_url`, `banner_url`, `website_url`: Varchar(500), Nullable
+- `contact_email`: Varchar(255)
+- `contact_phone`: Varchar(50), Nullable
+- `social_links`: JSON (LinkedIn, Telegram, X, Facebook)
+- `verified`: Boolean, Default `false`
+- `created_at`, `updated_at`: Timestamps
+
+### `sponsorship_packages`
+Modular sponsorship packages published by tournament organizers, teams, venues, or creators.
+- `id`: Bigint unsigned, Primary Key
+- `uuid`: UUID, Unique
+- `creator_id`: Foreign key -> `users(id)` ON DELETE CASCADE
+- `title`: Varchar(255)
+- `slug`: Varchar(255), Unique
+- `target_type`: Enum (`tournament`, `team`, `player`, `venue`, `creator`, `league`, `awareness_campaign`, `platform`)
+- `target_id`: Bigint unsigned, Nullable
+- `tier`: Enum (`title`, `presenting`, `gold`, `silver`, `bronze`, `custom`)
+- `price`: Decimal(12,2)
+- `currency`: Varchar(3), Default `'ETB'`
+- `benefits`: JSON (array of bulleted deliverables/benefits)
+- `deliverables`: JSON (deliverable definitions with types)
+- `duration_days`: Integer, Default `30`
+- `audience_estimate`: Integer, Default `0`
+- `is_published`: Boolean, Default `true`
+- `created_at`, `updated_at`: Timestamps
+
+### `sponsorships` (Enhanced)
+Active contracts, applications, approvals, and ROI telemetry.
+- `id`: Bigint unsigned, Primary Key
+- `uuid`: UUID, Unique
+- `contract_number`: Varchar(50), Unique (e.g. `CEE-SPON-2026-XXXXXX`)
+- `sponsor_id`: Foreign key -> `users(id)` ON DELETE CASCADE
+- `brand_profile_id`: Foreign key -> `brand_profiles(id)` ON DELETE SET NULL, Nullable
+- `package_id`: Foreign key -> `sponsorship_packages(id)` ON DELETE SET NULL, Nullable
+- `applicant_user_id`: Foreign key -> `users(id)` ON DELETE CASCADE
+- `reviewed_by_id`: Foreign key -> `users(id)` ON DELETE SET NULL, Nullable
+- `package_name`: Varchar(255)
+- `target_type`: Enum (matching targets)
+- `target_id`: Bigint unsigned, Nullable
+- `amount`: Decimal(12,2)
+- `currency`: Varchar(3), Default `'ETB'`
+- `contract_terms`: Text, Nullable
+- `status`: Enum (`applied`, `under_review`, `approved`, `contract_signed`, `active`, `completed`, `rejected`, `cancelled`)
+- `start_date`, `end_date`: Timestamps, Nullable
+- `rejection_reason`: Text, Nullable
+- `total_impressions`: Bigint unsigned, Default `0`
+- `total_clicks`: Bigint unsigned, Default `0`
+- `roi_metrics`: JSON (cached CTR, CPM, CPC, estimated media value, deliverables fulfillment rate)
+- `created_at`, `updated_at`: Timestamps
+
+### `sponsorship_deliverables`
+Granular deliverables fulfillment tracking with proof uploads and audit verification.
+- `id`: Bigint unsigned, Primary Key
+- `uuid`: UUID, Unique
+- `sponsorship_id`: Foreign key -> `sponsorships(id)` ON DELETE CASCADE
+- `title`: Varchar(255)
+- `description`: Text, Nullable
+- `deliverable_type`: Varchar(50) (e.g. `stream_overlay`, `physical_banner`, `social_post`, `booth_space`)
+- `due_date`: Timestamp, Nullable
+- `evidence_url`: Varchar(500), Nullable (URL to image proof, clip, or document)
+- `evidence_notes`: Text, Nullable
+- `status`: Enum (`pending`, `submitted`, `verified`, `rejected`)
+- `verified_by_id`: Foreign key -> `users(id)` ON DELETE SET NULL, Nullable
+- `verified_at`: Timestamp, Nullable
+- `rejection_notes`: Text, Nullable
+- `created_at`, `updated_at`: Timestamps
+
+### `prize_pool_contributions`
+Transparent crowdfunding and corporate sponsorship additions to verified tournament prize pools.
+- `id`: Bigint unsigned, Primary Key
+- `tournament_id`: Foreign key -> `tournaments(id)` ON DELETE CASCADE
+- `sponsor_id`: Foreign key -> `users(id)` ON DELETE SET NULL, Nullable
+- `brand_profile_id`: Foreign key -> `brand_profiles(id)` ON DELETE SET NULL, Nullable
+- `amount`: Decimal(12,2)
+- `currency`: Varchar(3), Default `'ETB'`
+- `donor_name`: Varchar(255), Default `'Community Supporter'`
+- `is_anonymous`: Boolean, Default `false`
+- `message`: Text, Nullable
+- `status`: Varchar(50), Default `'paid'`
+- `paid_at`: Timestamp, Nullable
+- `created_at`, `updated_at`: Timestamps
+
+### `brand_placements`
+Telemetry tracking for media exposures across livestreams, physical banners, and digital overlays.
+- `id`: Bigint unsigned, Primary Key
+- `sponsorship_id`: Foreign key -> `sponsorships(id)` ON DELETE CASCADE
+- `brand_profile_id`: Foreign key -> `brand_profiles(id)` ON DELETE CASCADE
+- `placement_type`: Varchar(50)
+- `location_identifier`: Varchar(255), Nullable
+- `impressions_count`: Bigint unsigned, Default `0`
+- `clicks_count`: Bigint unsigned, Default `0`
+- `media_urls`: JSON, Nullable
+- `created_at`, `updated_at`: Timestamps
+
+### `platform_feature_flags`
+Dynamic platform capability toggles.
+- `id`: Bigint unsigned, Primary Key
+- `key`: Varchar(100), Unique
+- `name`: Varchar(255)
+- `description`: Text, Nullable
+- `is_enabled`: Boolean, Default `true`
+- `audience`: Varchar(50), Default `'all'`
+- `metadata`: JSON, Nullable
+- `updated_by_id`: Foreign key -> `users(id)` ON DELETE SET NULL, Nullable
+- `created_at`, `updated_at`: Timestamps
+
+
 

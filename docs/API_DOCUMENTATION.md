@@ -973,4 +973,161 @@ This document describes the REST API endpoints available in the Campus Esports E
 - **Endpoint:** `GET /api/v1/campaigns/{id}` (Public - Records view count)
 - **Endpoint:** `POST /api/v1/campaigns/{id}/share` (Public - Records share event on Telegram, X, Facebook, Direct link)
 
+---
+
+## 7. Sponsorship Marketplace, Creator Tools & Platform Analytics (Phase 6)
+
+### Brand Profiles
+- **Endpoint:** `GET /api/v1/sponsors/brands`
+- **Auth:** Public
+- **Query Params:** `verified_only=1`, `industry=Telecommunications`, `search=Ethio`
+- **Description:** Returns paginated list of verified brands, company details, taglines, and social links.
+
+- **Endpoint:** `POST /api/v1/sponsors/brands`
+- **Auth:** `auth:sanctum` (Sponsor, Organizer, Super Admin)
+- **Request Body:**
+  ```json
+  {
+    "company_name": "Ethio Telecom",
+    "tagline": "Connecting the Nation",
+    "industry": "Telecommunications",
+    "contact_email": "sponsors@ethiotelecom.et",
+    "website_url": "https://www.ethiotelecom.et"
+  }
+  ```
+
+- **Endpoint:** `PUT /api/v1/sponsors/brands/{id}`
+- **Auth:** `auth:sanctum` (Brand Owner, Super Admin)
+
+### Sponsorship Packages
+- **Endpoint:** `GET /api/v1/sponsors/packages`
+- **Auth:** Public
+- **Query Params:** `target_type=tournament`, `tier=title`, `max_price=100000`
+- **Description:** Returns available sponsorship inventory with deliverables, benefits, duration, and audience estimates.
+
+- **Endpoint:** `POST /api/v1/sponsors/packages`
+- **Auth:** `auth:sanctum` (Organizer, Sponsor, Creator, Team Captain, Venue Admin, Super Admin)
+- **Request Body:**
+  ```json
+  {
+    "title": "AAU Grand Finals Title Sponsorship",
+    "target_type": "tournament",
+    "tier": "title",
+    "price": 150000.00,
+    "currency": "ETB",
+    "benefits": ["Stage LED Branding", "Livestream Overlays"],
+    "deliverables": [
+      {"title": "Lower Third Broadcast Overlay", "deliverable_type": "stream_overlay"},
+      {"title": "Physical Stage Banner", "deliverable_type": "stage_banner"}
+    ],
+    "duration_days": 30,
+    "audience_estimate": 25000
+  }
+  ```
+
+### Sponsorship Applications & Deals
+- **Endpoint:** `GET /api/v1/sponsorships`
+- **Auth:** `auth:sanctum`
+- **Description:** Returns user's applications or reviewed sponsorship deals.
+
+- **Endpoint:** `POST /api/v1/sponsorships/apply`
+- **Auth:** `auth:sanctum` (Sponsor, Organizer, Super Admin)
+- **Request Body:**
+  ```json
+  {
+    "brand_profile_id": 1,
+    "package_id": 1
+  }
+  ```
+
+- **Endpoint:** `POST /api/v1/sponsorships/{id}/review`
+- **Auth:** `auth:sanctum` (Package Owner / Target Admin / Super Admin)
+- **Request Body:**
+  ```json
+  {
+    "approve": true,
+    "contract_terms": "Formal agreement signed under Ethiopian Esports Federation rules."
+  }
+  ```
+
+### Deliverable Proof & Verification
+- **Endpoint:** `POST /api/v1/sponsorships/deliverables/{id}/evidence`
+- **Auth:** `auth:sanctum` (Deliverable Fulfiller / Applicant / Organizer)
+- **Request Body:**
+  ```json
+  {
+    "evidence_url": "https://campusesports.et/evidence/overlay_proof.png",
+    "evidence_notes": "Aired during Grand Finals Game 3 broadcast"
+  }
+  ```
+
+- **Endpoint:** `POST /api/v1/sponsorships/deliverables/{id}/verify`
+- **Auth:** `auth:sanctum` (Brand Owner / Reviewer / Super Admin)
+- **Request Body:**
+  ```json
+  {
+    "verified": true
+  }
+  ```
+
+### Performance Reports & ROI Export
+- **Endpoint:** `GET /api/v1/sponsorships/{id}/report`
+- **Auth:** `auth:sanctum` (Deal Parties, Super Admin)
+- **Description:** Computes real-time impressions, clicks, CTR %, CPM, CPC, estimated media value in ETB, and deliverables fulfillment rate %.
+
+- **Endpoint:** `GET /api/v1/sponsorships/{id}/report/export`
+- **Auth:** `auth:sanctum`
+- **Description:** Generates dynamic, formatted CSV report stream for sponsorship ROI presentations.
+
+### Transparent Tournament Prize Pool Funding
+- **Endpoint:** `GET /api/v1/tournaments/{id}/prize-pool`
+- **Auth:** Public
+- **Description:** Returns total prize pool, community/brand contributions, and top contributors leaderboard.
+
+- **Endpoint:** `POST /api/v1/tournaments/{id}/prize-pool/contribute`
+- **Auth:** `auth:sanctum` (Optional auth - allows anonymous community backing)
+- **Request Body:**
+  ```json
+  {
+    "amount": 500.00,
+    "donor_name": "AAU Esports Guild",
+    "is_anonymous": false,
+    "message": "Good luck to all student teams!"
+  }
+  ```
+
+### Creator Tools & Studio Insights
+- **Endpoint:** `GET /api/v1/creator/insights`
+- **Auth:** `auth:sanctum` (Creator, Organizer, Super Admin)
+- **Description:** Returns post performance, audience breakdown by university, top games, and tailored brand sponsorship opportunities.
+
+### Executive Platform Analytics & Admin Control
+- **Endpoint:** `GET /api/v1/admin/overview`
+- **Auth:** `auth:sanctum` (Super Admin)
+- **Description:** Returns executive cross-domain metrics and feature flags.
+
+- **Endpoint:** `GET /api/v1/admin/analytics`
+- **Auth:** `auth:sanctum` (Super Admin)
+- **Description:** Detailed executive metrics: users, retention (WAU/MAU), tournament completion rate, dispute rate, gate attendance %, ticketing revenue, university participation ranking, learning completions, and sponsorship volume.
+
+- **Endpoint:** `GET /api/v1/admin/analytics/export`
+- **Auth:** `auth:sanctum` (Super Admin)
+- **Description:** Dynamic platform executive analytics CSV export.
+
+- **Endpoint:** `GET /api/v1/admin/feature-flags`
+- **Auth:** `auth:sanctum` (Super Admin)
+
+- **Endpoint:** `PUT /api/v1/admin/feature-flags/{key}`
+- **Auth:** `auth:sanctum` (Super Admin)
+- **Request Body:**
+  ```json
+  {
+    "is_enabled": false
+  }
+  ```
+
+- **Endpoint:** `GET /api/v1/admin/system-health`
+- **Auth:** `auth:sanctum` (Super Admin)
+
+
 

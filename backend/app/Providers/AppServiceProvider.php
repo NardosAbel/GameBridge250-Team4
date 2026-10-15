@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Domain\Administration\Policies\AdminDashboardPolicy;
 use App\Domain\Chat\Models\ChatChannel;
 use App\Domain\Communities\Models\Community;
 use App\Domain\Education\Models\AwarenessCampaign;
@@ -27,6 +28,14 @@ use App\Domain\Profiles\Models\Profile;
 use App\Domain\Recruitment\Models\RecruitmentPost;
 use App\Domain\Social\Models\Comment;
 use App\Domain\Social\Models\Post;
+use App\Domain\Sponsorship\Models\BrandProfile;
+use App\Domain\Sponsorship\Models\Sponsorship;
+use App\Domain\Sponsorship\Models\SponsorshipDeliverable;
+use App\Domain\Sponsorship\Models\SponsorshipPackage;
+use App\Domain\Sponsorship\Policies\BrandProfilePolicy;
+use App\Domain\Sponsorship\Policies\SponsorshipDeliverablePolicy;
+use App\Domain\Sponsorship\Policies\SponsorshipPackagePolicy;
+use App\Domain\Sponsorship\Policies\SponsorshipPolicy;
 use App\Domain\Teams\Models\Team;
 use App\Domain\Ticketing\Models\Ticket;
 use App\Domain\Ticketing\Models\TicketOrder;
@@ -92,5 +101,15 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Certificate::class, CertificatePolicy::class);
         Gate::policy(LearningPath::class, LearningPathPolicy::class);
         Gate::policy(AwarenessCampaign::class, AwarenessCampaignPolicy::class);
+
+        Gate::policy(BrandProfile::class, BrandProfilePolicy::class);
+        Gate::policy(SponsorshipPackage::class, SponsorshipPackagePolicy::class);
+        Gate::policy(Sponsorship::class, SponsorshipPolicy::class);
+        Gate::policy(SponsorshipDeliverable::class, SponsorshipDeliverablePolicy::class);
+
+        Gate::define('view-platform-analytics', [AdminDashboardPolicy::class, 'viewPlatformAnalytics']);
+        Gate::define('manage-feature-flags', [AdminDashboardPolicy::class, 'manageFeatureFlags']);
+        Gate::define('view-system-health', [AdminDashboardPolicy::class, 'viewSystemHealth']);
+        Gate::define('view-creator-analytics', [AdminDashboardPolicy::class, 'viewCreatorAnalytics']);
     }
 }

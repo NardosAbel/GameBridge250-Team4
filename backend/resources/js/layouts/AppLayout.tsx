@@ -66,6 +66,14 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
     return (
         <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 transition-colors">
+            {/* Accessible Skip to Content Link (WCAG 2.1 AA) */}
+            <a
+                href="#main-content"
+                className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:bg-emerald-500 focus:text-slate-950 focus:font-bold focus:rounded-xl focus:shadow-xl focus:outline-none"
+            >
+                Skip to main content
+            </a>
+
             {/* Top Navigation */}
             <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -373,7 +381,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             )}
 
             {/* Main Page Content */}
-            <main className="flex-1 w-full">
+            <main id="main-content" className="flex-1 w-full" tabIndex={-1}>
                 {children}
             </main>
 

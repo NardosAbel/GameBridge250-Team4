@@ -828,5 +828,17 @@ Dynamic platform capability toggles.
 - `updated_by_id`: Foreign key -> `users(id)` ON DELETE SET NULL, Nullable
 - `created_at`, `updated_at`: Timestamps
 
+---
 
+## 11. Production Performance Composite Indexes (Phase 7)
 
+Added via migration [`2026_10_15_160000_add_production_performance_indexes_for_phase7.php`](file:///c:/laragon/www/campus-esports-ethiopia/backend/database/migrations/2026_10_15_160000_add_production_performance_indexes_for_phase7.php) to eliminate full table scans during peak concurrency:
+
+| Table | Index Name | Indexed Columns | Query Purpose |
+| :--- | :--- | :--- | :--- |
+| `posts` | `posts_user_created_idx` | `(user_id, created_at)` | Fast timeline retrieval for followed player and team profiles |
+| `tournaments` | `tournaments_status_start_idx` | `(status, start_date)` | High-throughput tournament discovery and homepage live feeds |
+| `matches` | `matches_tourn_status_idx` | `(tournament_id, status)` | Fast bracket rendering and active match room lookups |
+| `tickets` | `tickets_user_status_idx` | `(user_id, status)` | Rapid attendee badge lookup on mobile tickets wallet |
+| `course_enrollments` | `enrollments_user_status_idx` | `(user_id, status)` | Learning dashboard and streak progress queries |
+| `sponsorships` | `sponsorships_status_target_idx` | `(status, sponsorship_target_type)` | Sponsor campaign filtering and public sponsor banner retrieval |

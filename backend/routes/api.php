@@ -98,8 +98,9 @@ Route::prefix('v1')->group(function () {
     Route::get('/events/{event}', [EventController::class, 'show']);
     Route::get('/tickets/types', [TicketController::class, 'ticketTypes']);
 
-    // Public Payment Webhook
-    Route::post('/payments/webhook/{provider}', [PaymentController::class, 'webhook']);
+    // Public Payment Webhook (rate-limited against DoS)
+    Route::post('/payments/webhook/{provider}', [PaymentController::class, 'webhook'])
+        ->middleware('throttle:100,1');
 
     // Public Digital Awareness & Education Hub
     Route::get('/courses', [CourseController::class, 'index']);
@@ -246,19 +247,19 @@ Route::prefix('v1')->group(function () {
         // Ticketing Operations & Scanner Gate
         Route::prefix('tickets')->group(function () {
             Route::post('/types', [TicketController::class, 'storeTicketType']);
-            Route::post('/checkout', [TicketController::class, 'checkout']);
+            Route::post('/checkout', [TicketController::class, 'checkout'])->middleware('throttle:30,1');
             Route::get('/my-tickets', [TicketController::class, 'myTickets']);
             Route::get('/reports', [TicketController::class, 'reports']);
             Route::get('/reports/export', [TicketController::class, 'exportCsv']);
-            Route::post('/scan', [TicketController::class, 'scan']);
-            Route::post('/sync-scans', [TicketController::class, 'syncOfflineScans']);
+            Route::post('/scan', [TicketController::class, 'scan'])->middleware('throttle:120,1');
+            Route::post('/sync-scans', [TicketController::class, 'syncOfflineScans'])->middleware('throttle:60,1');
             Route::get('/{ticket}', [TicketController::class, 'showTicket']);
             Route::post('/{ticket}/transfer', [TicketController::class, 'transfer']);
         });
 
         // Payments, Refunds & Organizer Payouts
         Route::prefix('payments')->group(function () {
-            Route::post('/initiate', [PaymentController::class, 'initiate']);
+            Route::post('/initiate', [PaymentController::class, 'initiate'])->middleware('throttle:30,1');
             Route::post('/{payment}/reconcile', [PaymentController::class, 'reconcile']);
             Route::post('/orders/{order}/refund', [PaymentController::class, 'requestRefund']);
             Route::post('/refunds/{refund}/process', [PaymentController::class, 'processRefund']);

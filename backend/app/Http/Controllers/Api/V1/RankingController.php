@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\RankingResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class RankingController extends Controller
 {
@@ -55,7 +56,10 @@ class RankingController extends Controller
             $query->where('season_id', $seasonId);
         }
 
-        $top = $query->limit(50)->get();
+        $cacheKey = 'leaderboard_season_'.($seasonId ?? 'current').'_game_'.($request->query('game_id', 'all'));
+        $top = Cache::remember($cacheKey, 300, function () use ($query) {
+            return $query->limit(50)->get();
+        });
 
         return response()->json([
             'success' => true,

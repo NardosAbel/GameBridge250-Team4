@@ -41,9 +41,9 @@ campus-esports-ethiopia/
 │   │   │   ├── Controllers/Web/   # Inertia Web Controllers (Feed, Teams, Communities, Tournaments, Rankings, Venues, Tickets, Scanner, Reports, Education, Certificates)
 │   │   │   ├── Requests/          # Form Request Validators with Policy authorizations
 │   │   │   ├── Resources/         # Standardized API Resources (Room credentials privacy gated, Signed QR tokens, Sanitized quiz questions)
-│   │   │   └── Middleware/        # Inertia, RBAC, Rate-limiters
+│   │   │   └── Middleware/        # Inertia, RBAC, Rate-limiters, SecurityHeaders (HSTS, CSP)
 │   │├── database/
-│   │   ├── migrations/            # 40 Core Domain Migrations (PostgreSQL/MySQL/SQLite)
+│   │   ├── migrations/            # 41 Core Domain & Performance Index Migrations (PostgreSQL/MySQL/SQLite)
 │   │   └── seeders/               # 9 Roles, Admin, Organizer, Player, Core Games, Badges & Awareness Courses
 │   ├── resources/
 │   │   ├── js/                    # React 19 + Inertia + TypeScript Frontend
@@ -52,8 +52,8 @@ campus-esports-ethiopia/
 │   │   │   ├── pages/             # Venues, Tickets, Gate Scanner, Education (Catalog, Course Show, Lesson Viewer, Quiz Player, Dashboard, Certificate Verification, Campaigns)
 │   │   │   ├── hooks/             # useTranslation (EN/AM), useTheme (Dark/Light)
 │   │   │   └── i18n/              # English (`en.json`) and Amharic (`am.json`)
-│   └── tests/                     # 132 Pest Feature & Unit Tests (572 Assertions, 100% Green)
-├── docs/                          # Architecture, API Documentation, Database Schema & Guides
+│   └── tests/                     # 138 Pest Feature & Unit Tests (600 Assertions, 100% Green)
+├── docs/                          # Architecture, Deployment, Runbooks, Checklists & Schemas
 ├── docker/                        # Multi-stage Dockerfile and Nginx configuration
 ├── docker-compose.yml             # Full-stack Docker Compose environment
 └── .github/workflows/ci.yml       # GitHub Actions CI for Pint, Pest, TypeScript, Vite, Docker
@@ -177,6 +177,44 @@ npm run build
 | **Super Admin** | `admin@campusesports.et` | `Password123!` | Full administrative privileges, audit log access |
 | **Organizer** | `organizer@campusesports.et` | `Password123!` | Tournament creation and bracket management |
 | **Player** | `player@campusesports.et` | `Password123!` | Competitive gamer tag `HabeshaSniper` (AAU) |
+
+---
+
+## Production Readiness & Operations (Phase 7)
+
+### Diagnostics & Health Check
+Verify database connectivity, Redis cache, filesystem permissions, and debug flags:
+```bash
+cd backend
+php artisan cee:health-check
+```
+
+### Production Hardening & Optimization
+```bash
+# Run security and performance composite index migrations
+php artisan migrate --force
+
+# Warm configuration, route, view, and event caches
+php artisan optimize
+
+# Restart queues and Reverb WebSocket daemons
+supervisorctl restart cee-worker:*
+supervisorctl restart cee-reverb:*
+```
+
+---
+
+## Production Guides & Checklists
+
+Comprehensive production documentation is available in the [`docs/`](file:///c:/laragon/www/campus-esports-ethiopia/docs) directory:
+
+1. [**DEPLOYMENT_GUIDE.md**](file:///c:/laragon/www/campus-esports-ethiopia/docs/DEPLOYMENT_GUIDE.md): Architecture specs, zero-downtime deployment script, system requirements, and rollbacks.
+2. [**OPERATIONS_RUNBOOK.md**](file:///c:/laragon/www/campus-esports-ethiopia/docs/OPERATIONS_RUNBOOK.md): Monitoring, Horizon queues, Reverb daemons, backups, payment reconciliation, offline sync, and load testing.
+3. [**SECURITY_CHECKLIST.md**](file:///c:/laragon/www/campus-esports-ethiopia/docs/SECURITY_CHECKLIST.md): HSTS, CSP, RBAC, rate-limiting, signed QR verification, and OWASP Top 10 matrix.
+4. [**ACCESSIBILITY_CHECKLIST.md**](file:///c:/laragon/www/campus-esports-ethiopia/docs/ACCESSIBILITY_CHECKLIST.md): WCAG 2.1 AA audits, skip-to-content, keyboard focus rings, color contrast, and bilingual support.
+5. [**FINAL_LAUNCH_CHECKLIST.md**](file:///c:/laragon/www/campus-esports-ethiopia/docs/FINAL_LAUNCH_CHECKLIST.md): Pre-flight verification, payment gateway credentials, cutover protocol, and smoke tests.
+6. [**API_DOCUMENTATION.md**](file:///c:/laragon/www/campus-esports-ethiopia/docs/API_DOCUMENTATION.md): REST API v1 reference including security headers and rate limits.
+7. [**DATABASE_SCHEMA.md**](file:///c:/laragon/www/campus-esports-ethiopia/docs/DATABASE_SCHEMA.md): Complete relational database schema with composite performance indexes.
 
 ---
 

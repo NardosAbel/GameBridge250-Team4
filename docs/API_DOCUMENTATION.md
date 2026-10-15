@@ -1129,5 +1129,45 @@ This document describes the REST API endpoints available in the Campus Esports E
 - **Endpoint:** `GET /api/v1/admin/system-health`
 - **Auth:** `auth:sanctum` (Super Admin)
 
+---
 
+## 11. Production Hardening, Security Headers & Rate Limiting (Phase 7)
 
+### Global Security Headers
+All API responses include strict security headers injected by `SecurityHeadersMiddleware`:
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`
+- `Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' wss: https:;`
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(self)`
+
+### Rate Limiting Thresholds
+The following endpoints enforce dedicated throttles to protect against brute-force and DDoS attacks:
+- `POST /api/v1/auth/login`: `5 requests / minute`
+- `POST /api/v1/auth/register`: `5 requests / minute`
+- `POST /api/v1/auth/verify-otp`: `5 requests / minute`
+- `POST /api/v1/auth/resend-otp`: `3 requests / minute`
+- `POST /api/v1/tickets/checkout`: `30 requests / minute`
+- `POST /api/v1/tickets/scan`: `120 requests / minute` (High-throughput gate access)
+- `POST /api/v1/tickets/sync-scans`: `60 batches / minute`
+- `POST /api/v1/payments/initiate`: `30 requests / minute`
+- `POST /api/v1/payments/webhook/{provider}`: `100 requests / minute`
+
+### Diagnostic Health Checks
+- **CLI Health Command:** `php artisan cee:health-check` (Exit code 0 on healthy, 1 on degraded).
+- **HTTP Probe Endpoint:** `GET /up` or `GET /api/v1/admin/system-health`.
+  - **Healthy Response:** `HTTP 200 OK`
+  - **Payload:**
+    ```json
+    {
+      "status": "healthy",
+      "checks": {
+        "database": "connected",
+        "cache": "operational",
+        "storage": "writable",
+        "debug_mode": "disabled"
+      },
+      "timestamp": "2026-10-15T15:00:00Z"
+    }
+    ```

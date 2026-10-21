@@ -2,6 +2,7 @@
 
 namespace App\Domain\Identity\Actions;
 
+use App\Domain\Identity\Enums\UserStatusEnum;
 use App\Domain\Identity\Services\AuditLogger;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
@@ -38,6 +39,14 @@ class LoginUserAction
             throw ValidationException::withMessages([
                 'login' => ['This account has been banned due to policy violations.'],
             ]);
+        }
+
+        if ($user->isSuspended() && $user->suspended_until !== null && $user->suspended_until->isPast()) {
+            $user->update([
+                'status' => UserStatusEnum::ACTIVE,
+                'suspended_until' => null,
+            ]);
+            $user->refresh();
         }
 
         if ($user->isSuspended()) {

@@ -167,7 +167,7 @@ export default function VenueShow({ venueId }: VenueShowProps) {
         );
     }
 
-    const isOwner = auth.user && (venue.owner?.id === auth.user.id || auth.user.roles?.includes('super-admin'));
+    const isOwner = auth.user && (venue.owner?.id === auth.user.id || auth.user.roles?.includes('super_admin'));
 
     return (
         <AppLayout>

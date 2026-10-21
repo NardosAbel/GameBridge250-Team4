@@ -4,51 +4,36 @@ namespace App\Domain\Payments\Gateways;
 
 use App\Domain\Payments\Contracts\PaymentGatewayInterface;
 use App\Domain\Payments\Models\Payment;
-use Illuminate\Support\Str;
+use App\Domain\Payments\Support\GatewayCheckout;
+use App\Domain\Payments\Support\WebhookAuthenticator;
 
 class CardPaymentGateway implements PaymentGatewayInterface
 {
+    public function __construct(private readonly WebhookAuthenticator $authenticator) {}
+
     public function charge(Payment $payment, array $options = []): array
     {
-        $ref = 'CARD-'.strtoupper(Str::random(12));
-
-        return [
-            'success' => true,
-            'status' => 'pending',
-            'transaction_reference' => $ref,
-            'redirect_url' => "https://secure-card-gateway.et/checkout/{$ref}",
-            'message' => 'Credit/Debit card 3D-Secure payment session created.',
-            'raw' => [
-                'session_id' => $ref,
-                'provider' => 'card',
-            ],
-        ];
+        return GatewayCheckout::start(
+            $payment,
+            'card',
+            'CARD',
+            'Card checkout initialized.',
+        );
     }
 
     public function verifyWebhook(array $payload, ?string $signature = null, array $headers = []): array
     {
-        $ref = $payload['session_id'] ?? $payload['transaction_reference'] ?? null;
-        $status = strtolower((string) ($payload['status'] ?? ''));
-
-        $isPaid = in_array($status, ['success', 'captured', 'paid'], true);
-
-        return [
-            'valid' => true,
-            'event_type' => $isPaid ? 'payment.success' : 'payment.failed',
-            'provider_reference' => $ref,
-            'status' => $isPaid ? 'paid' : 'failed',
-            'error' => null,
-        ];
+        return $this->authenticator->authenticate(
+            provider: 'card',
+            payload: $payload,
+            signature: $signature,
+            referenceKeys: ['session_id', 'transaction_reference', 'reference'],
+            paidStatuses: ['success', 'captured', 'paid', 'completed'],
+        );
     }
 
     public function refund(Payment $payment, float $amount, string $reason): array
     {
-        $refundRef = 'CRD-REF-'.strtoupper(Str::random(8));
-
-        return [
-            'success' => true,
-            'refund_reference' => $refundRef,
-            'message' => "Card refund of {$amount} {$payment->currency} credited back to card.",
-        ];
+        return GatewayCheckout::refund('card', $amount, (string) $payment->currency);
     }
 }

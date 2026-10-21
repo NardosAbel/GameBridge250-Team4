@@ -19,6 +19,7 @@ class Ticket extends Model
     protected $fillable = [
         'uuid',
         'ticket_order_id',
+        'issuance_slot',
         'ticket_type_id',
         'event_id',
         'tournament_id',

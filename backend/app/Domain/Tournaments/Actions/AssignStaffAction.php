@@ -12,7 +12,7 @@ class AssignStaffAction
 {
     public function execute(User $actor, Tournament $tournament, int $targetUserId, string $role): TournamentStaff
     {
-        $isOrganizer = $tournament->organizer_id === $actor->id || $actor->hasRole('super-admin');
+        $isOrganizer = $tournament->organizer_id === $actor->id || $actor->hasRole('super_admin');
 
         if (! $isOrganizer) {
             throw new AuthorizationException('Only tournament organizers can assign staff roles.');

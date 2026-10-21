@@ -22,7 +22,7 @@ class SubmitMatchResultAction
         $tournament = $match->tournament;
         $isReferee = $tournament->staff()->where('user_id', $actor->id)->whereIn('role', ['admin', 'referee', 'scorekeeper'])->exists()
             || $match->referee_id === $actor->id
-            || $actor->hasRole('super-admin');
+            || $actor->hasRole('super_admin');
 
         $isParticipant = $this->isMatchParticipant($actor, $match);
 

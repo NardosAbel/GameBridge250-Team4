@@ -12,6 +12,9 @@ class ProfileResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $viewer = $request->user();
+        $isOwner = $viewer !== null && (int) $viewer->id === (int) $this->user_id;
+
         return [
             'id' => $this->id,
             'uuid' => $this->uuid,
@@ -20,7 +23,7 @@ class ProfileResource extends JsonResource
             'avatar_url' => $this->avatar_url,
             'cover_url' => $this->cover_url,
             'university' => $this->university,
-            'school_id_number' => $this->school_id_number,
+            'school_id_number' => $isOwner ? $this->school_id_number : null,
             'student_verified' => (bool) $this->student_verified,
             'platform_handles' => $this->platform_handles,
             'preferred_games' => $this->preferred_games,

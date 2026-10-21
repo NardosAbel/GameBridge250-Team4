@@ -19,7 +19,7 @@ class UpdateSeedingAction
     {
         $isStaff = $tournament->organizer_id === $actor->id
             || $tournament->staff()->where('user_id', $actor->id)->exists()
-            || $actor->hasRole('super-admin');
+            || $actor->hasRole('super_admin');
 
         if (! $isStaff) {
             throw new AuthorizationException('Only tournament organizers or staff can manage seeds.');

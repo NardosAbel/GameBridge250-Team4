@@ -24,10 +24,14 @@ class ConfirmMatchResultAction
             throw new InvalidArgumentException('No submitted match result found to confirm.');
         }
 
+        if ($match->status === 'disputed' || $result->status === 'disputed' || $match->disputes()->whereIn('status', ['open', 'under_review'])->exists()) {
+            throw new InvalidArgumentException('A disputed match cannot be confirmed until the dispute is resolved.');
+        }
+
         $tournament = $match->tournament;
         $isReferee = $tournament->staff()->where('user_id', $actor->id)->whereIn('role', ['admin', 'referee', 'scorekeeper'])->exists()
             || $match->referee_id === $actor->id
-            || $actor->hasRole('super-admin');
+            || $actor->hasRole('super_admin');
 
         $isOpponent = $this->isOpponent($actor, $match, $result);
 
@@ -87,13 +91,34 @@ class ConfirmMatchResultAction
         if ($match->participant1_type === 'team') {
             $p1Team = $match->participant1_entity;
             $p2Team = $match->participant2_entity;
+            $submitterOnP1 = $p1Team && $p1Team->members()->where('user_id', $result->submitted_by_id)->exists();
+            $submitterOnP2 = $p2Team && $p2Team->members()->where('user_id', $result->submitted_by_id)->exists();
+            $opposing = null;
 
-            $isP1 = $p1Team && $p1Team->members()->where('user_id', $actor->id)->exists();
-            $isP2 = $p2Team && $p2Team->members()->where('user_id', $actor->id)->exists();
+            if ($submitterOnP1 && ! $submitterOnP2) {
+                $opposing = $p2Team;
+            } elseif ($submitterOnP2 && ! $submitterOnP1) {
+                $opposing = $p1Team;
+            }
 
-            return $isP1 || $isP2;
+            if (! $opposing) {
+                return false;
+            }
+
+            return $opposing->members()
+                ->where('user_id', $actor->id)
+                ->whereIn('role', ['owner', 'captain', 'manager'])
+                ->exists();
         }
 
-        return $match->participant1_id === $actor->id || $match->participant2_id === $actor->id;
+        if ((int) $result->submitted_by_id === (int) $match->participant1_id) {
+            return (int) $actor->id === (int) $match->participant2_id;
+        }
+
+        if ((int) $result->submitted_by_id === (int) $match->participant2_id) {
+            return (int) $actor->id === (int) $match->participant1_id;
+        }
+
+        return false;
     }
 }

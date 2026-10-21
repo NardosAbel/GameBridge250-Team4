@@ -20,7 +20,7 @@ class TeamPolicy
 
     public function update(User $user, Team $team): bool
     {
-        if ($user->hasRole('admin')) {
+        if ($user->hasRole('super_admin')) {
             return true;
         }
 
@@ -38,7 +38,7 @@ class TeamPolicy
 
     public function manageRoster(User $user, Team $team): bool
     {
-        if ($user->hasRole('admin')) {
+        if ($user->hasRole('super_admin')) {
             return true;
         }
 
@@ -51,7 +51,7 @@ class TeamPolicy
 
     public function transferOwnership(User $user, Team $team): bool
     {
-        if ($user->hasRole('admin')) {
+        if ($user->hasRole('super_admin')) {
             return true;
         }
 
@@ -60,6 +60,6 @@ class TeamPolicy
 
     public function delete(User $user, Team $team): bool
     {
-        return $user->id === $team->leader_id || $user->hasRole('admin');
+        return $user->id === $team->leader_id || $user->hasRole('super_admin');
     }
 }

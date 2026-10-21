@@ -13,7 +13,7 @@ class CreateTeamAction
 {
     public function execute(User $user, array $data): Team
     {
-        if ($user->isBanned() || $user->isSuspended()) {
+        if ($user->isBanned() || $user->isSuspended() || $user->isMuted()) {
             throw new InvalidArgumentException('Suspended or banned users cannot create teams.');
         }
 

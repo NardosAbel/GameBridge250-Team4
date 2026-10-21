@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { Button } from './Button';
 
@@ -10,6 +10,8 @@ interface ModalProps {
     children: React.ReactNode;
 }
 
+const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
 export const Modal: React.FC<ModalProps> = ({
     isOpen,
     onClose,
@@ -17,21 +19,53 @@ export const Modal: React.FC<ModalProps> = ({
     description,
     children,
 }) => {
+    const panelRef = useRef<HTMLDivElement>(null);
+    const previouslyFocused = useRef<HTMLElement | null>(null);
+
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && isOpen) {
+        if (!isOpen) {
+            return;
+        }
+
+        previouslyFocused.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        const panel = panelRef.current;
+        const focusable = () => Array.from(panel?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []);
+        focusable()[0]?.focus();
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
                 onClose();
+                return;
+            }
+
+            if (event.key !== 'Tab') {
+                return;
+            }
+
+            const nodes = focusable();
+            if (nodes.length === 0) {
+                event.preventDefault();
+                return;
+            }
+
+            const first = nodes[0];
+            const last = nodes[nodes.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
             }
         };
 
-        if (isOpen) {
-            document.body.style.overflow = 'hidden';
-            window.addEventListener('keydown', handleKeyDown);
-        }
+        document.body.style.overflow = 'hidden';
+        window.addEventListener('keydown', handleKeyDown);
 
         return () => {
-            document.body.style.overflow = 'unset';
+            document.body.style.overflow = '';
             window.removeEventListener('keydown', handleKeyDown);
+            previouslyFocused.current?.focus();
         };
     }, [isOpen, onClose]);
 
@@ -40,11 +74,17 @@ export const Modal: React.FC<ModalProps> = ({
     return (
         <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="modal-title"
+            role="presentation"
+            onClick={onClose}
         >
-            <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl text-left">
+            <div
+                ref={panelRef}
+                className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl text-left"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="modal-title"
+                onClick={(event) => event.stopPropagation()}
+            >
                 <div className="flex items-center justify-between pb-4 border-b border-slate-800">
                     <div>
                         <h3 id="modal-title" className="text-lg font-bold text-slate-100">

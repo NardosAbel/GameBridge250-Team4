@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 
 class TakeModerationAction
@@ -35,9 +36,21 @@ class TakeModerationAction
         return DB::transaction(function () use ($moderator, $targetUser, $action, $reason, $report, $contentToDelete, $expiresAt) {
             // Apply impact to user or content
             if ($action === 'ban') {
-                $targetUser->update(['status' => UserStatusEnum::BANNED]);
+                $targetUser->update([
+                    'status' => UserStatusEnum::BANNED,
+                    'suspended_until' => null,
+                ]);
+                $this->revokeAccess($targetUser);
             } elseif ($action === 'suspend') {
-                $targetUser->update(['status' => UserStatusEnum::SUSPENDED]);
+                $targetUser->update([
+                    'status' => UserStatusEnum::SUSPENDED,
+                    'suspended_until' => $expiresAt,
+                ]);
+                $this->revokeAccess($targetUser);
+            } elseif ($action === 'mute') {
+                $targetUser->update([
+                    'muted_until' => $expiresAt ?? now()->addDays(7),
+                ]);
             } elseif ($action === 'delete_content' && $contentToDelete) {
                 $contentToDelete->delete();
             }
@@ -75,5 +88,14 @@ class TakeModerationAction
 
             return $case;
         });
+    }
+
+    private function revokeAccess(User $user): void
+    {
+        $user->tokens()->delete();
+
+        if (Schema::hasTable('sessions')) {
+            DB::table('sessions')->where('user_id', $user->id)->delete();
+        }
     }
 }

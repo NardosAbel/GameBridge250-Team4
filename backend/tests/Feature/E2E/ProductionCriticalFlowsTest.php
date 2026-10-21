@@ -11,6 +11,9 @@ use App\Domain\Ticketing\Services\QrTokenService;
 use App\Domain\Tournaments\Actions\CreateTournamentAction;
 use App\Domain\Tournaments\Models\TournamentMatch;
 use App\Domain\Tournaments\Models\TournamentRegistration;
+use App\Domain\Venues\Models\Event;
+use App\Domain\Venues\Models\Venue;
+use App\Domain\Venues\Models\VenueStaff;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
 
@@ -254,9 +257,37 @@ test('e2e: gate scanner validation and duplicate scan rejection flow', function 
         'status' => 'paid',
     ]);
 
+    $venue = Venue::create([
+        'owner_id' => $this->organizer->id,
+        'name' => 'Gate Venue',
+        'slug' => 'gate-venue',
+        'city' => 'Addis Ababa',
+        'address' => 'Bole',
+        'capacity' => 200,
+        'is_verified' => true,
+    ]);
+    VenueStaff::create([
+        'venue_id' => $venue->id,
+        'user_id' => $this->scanner->id,
+        'role' => 'scanner',
+        'is_active' => true,
+    ]);
+    $event = Event::create([
+        'venue_id' => $venue->id,
+        'organizer_id' => $this->organizer->id,
+        'title' => 'Gate Event',
+        'slug' => 'gate-event',
+        'start_time' => now()->addDay(),
+        'end_time' => now()->addDay()->addHours(4),
+        'capacity' => 200,
+        'status' => 'published',
+    ]);
+
     $ticket = Ticket::create([
         'ticket_order_id' => $order->id,
         'ticket_type_id' => $tier->id,
+        'event_id' => $event->id,
+        'venue_id' => $venue->id,
         'user_id' => $this->player1->id,
         'status' => 'active',
     ]);
@@ -264,10 +295,12 @@ test('e2e: gate scanner validation and duplicate scan rejection flow', function 
     $qrService = app(QrTokenService::class);
     $payload = $qrService->generatePayload($ticket);
 
-    // 1. Initial valid scan by gate staff
+    // 1. Initial valid scan by gate staff assigned to this venue
     $scan1 = $this->actingAs($this->scanner, 'sanctum')
         ->postJson('/api/v1/tickets/scan', [
             'qr_payload' => $payload,
+            'event_id' => $event->id,
+            'venue_id' => $venue->id,
         ]);
 
     $scan1->assertStatus(200)
@@ -283,6 +316,8 @@ test('e2e: gate scanner validation and duplicate scan rejection flow', function 
     $scan2 = $this->actingAs($this->scanner, 'sanctum')
         ->postJson('/api/v1/tickets/scan', [
             'qr_payload' => $payload,
+            'event_id' => $event->id,
+            'venue_id' => $venue->id,
         ]);
 
     $scan2->assertStatus(409)

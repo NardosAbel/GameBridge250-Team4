@@ -18,7 +18,7 @@ class CreateTournamentAction
     public function execute(User $organizer, array $data): Tournament
     {
         // Enforce organizer or super-admin role
-        if (! $organizer->hasRole(['organizer', 'super-admin']) && ! $organizer->can('tournaments.create')) {
+        if (! $organizer->hasRole(['organizer', 'super_admin']) && ! $organizer->can('tournaments.create')) {
             throw new AuthorizationException('Only verified tournament organizers can create tournaments.');
         }
 

@@ -10,7 +10,7 @@ class CloseRecruitmentPostAction
 {
     public function execute(User $user, RecruitmentPost $post): RecruitmentPost
     {
-        if ($post->user_id !== $user->id && ! $user->hasRole('admin')) {
+        if ($post->user_id !== $user->id && ! $user->hasRole('super_admin')) {
             throw new InvalidArgumentException('You are not authorized to close this recruitment post.');
         }
 

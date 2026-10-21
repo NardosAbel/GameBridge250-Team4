@@ -19,6 +19,7 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <env name="APP_KEY" value="base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=" force="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
@@ -32,5 +33,12 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="PAYMENTS_SANDBOX" value="true"/>
+        <env name="TELEBIRR_WEBHOOK_SECRET" value="test-telebirr-webhook-secret"/>
+        <env name="CHAPA_WEBHOOK_SECRET" value="test-chapa-webhook-secret"/>
+        <env name="MPESA_WEBHOOK_SECRET" value="test-mpesa-webhook-secret"/>
+        <env name="CARD_WEBHOOK_SECRET" value="test-card-webhook-secret"/>
+        <env name="BANK_TRANSFER_WEBHOOK_SECRET" value="test-bank-webhook-secret"/>
+        <env name="MANUAL_PAYMENT_WEBHOOK_SECRET" value="test-manual-webhook-secret"/>
     </php>
 </phpunit>

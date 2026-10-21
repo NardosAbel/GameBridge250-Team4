@@ -5,6 +5,7 @@ namespace App\Domain\Identity\Actions;
 use App\Domain\Identity\Models\Otp;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Request;
 
 class SendOtpAction
@@ -32,6 +33,15 @@ class SendOtpAction
             'expires_at' => now()->addMinutes(10),
             'ip_address' => Request::ip(),
         ]);
+
+        if (filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+            Mail::raw(
+                "Your Campus Esports Ethiopia verification code is {$plainOtp}. It expires in 10 minutes.",
+                function ($message) use ($recipient): void {
+                    $message->to($recipient)->subject('Your verification code');
+                }
+            );
+        }
 
         return [
             'otp_id' => $otp->uuid,

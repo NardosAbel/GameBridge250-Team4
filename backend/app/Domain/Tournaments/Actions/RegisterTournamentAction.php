@@ -25,7 +25,7 @@ class RegisterTournamentAction
             $tournament = Tournament::where('id', $tournament->id)->lockForUpdate()->first();
 
             // 1. Check if tournament registration is open
-            if ($tournament->status !== 'registration_open' && ! $user->hasRole(['organizer', 'super-admin'])) {
+            if ($tournament->status !== 'registration_open' && ! $user->hasRole(['organizer', 'super_admin'])) {
                 throw new InvalidArgumentException('Tournament registration is currently closed.');
             }
 
@@ -71,7 +71,7 @@ class RegisterTournamentAction
                 $inviteCode = $data['invitation_code'] ?? null;
                 $validCodes = $tournament->settings['invitation_codes'] ?? [];
 
-                if (! in_array($inviteCode, $validCodes, true) && ! $user->hasRole(['organizer', 'super-admin'])) {
+                if (! in_array($inviteCode, $validCodes, true) && ! $user->hasRole(['organizer', 'super_admin'])) {
                     throw new AuthorizationException('A valid invitation code is required for this tournament.');
                 }
             }

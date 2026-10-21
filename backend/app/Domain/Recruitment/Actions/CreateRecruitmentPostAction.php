@@ -11,7 +11,7 @@ class CreateRecruitmentPostAction
 {
     public function execute(User $user, array $data): RecruitmentPost
     {
-        if ($user->isBanned() || $user->isSuspended()) {
+        if ($user->isBanned() || $user->isSuspended() || $user->isMuted()) {
             throw new InvalidArgumentException('Suspended or banned users cannot post recruitment notices.');
         }
 

@@ -9,7 +9,7 @@ class DisputePolicy
 {
     public function view(User $user, Dispute $dispute): bool
     {
-        if ($user->hasRole('super-admin') || $dispute->raised_by_id === $user->id) {
+        if ($user->hasRole('super_admin') || $dispute->raised_by_id === $user->id) {
             return true;
         }
 
@@ -21,7 +21,7 @@ class DisputePolicy
 
     public function resolve(User $user, Dispute $dispute): bool
     {
-        if ($user->hasRole('super-admin')) {
+        if ($user->hasRole('super_admin')) {
             return true;
         }
 

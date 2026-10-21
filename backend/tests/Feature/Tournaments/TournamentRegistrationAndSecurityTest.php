@@ -22,7 +22,7 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     Role::findOrCreate('organizer');
     Role::findOrCreate('player');
-    Role::findOrCreate('super-admin');
+    Role::findOrCreate('super_admin');
 
     $this->organizer = User::factory()->create();
     $this->organizer->assignRole('organizer');

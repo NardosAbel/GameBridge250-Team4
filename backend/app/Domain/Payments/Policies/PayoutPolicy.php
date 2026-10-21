@@ -9,11 +9,11 @@ class PayoutPolicy
 {
     public function view(User $user, Payout $payout): bool
     {
-        return $payout->user_id === $user->id || $user->hasRole('super-admin');
+        return $payout->user_id === $user->id || $user->hasRole('super_admin');
     }
 
     public function process(User $user, Payout $payout): bool
     {
-        return $user->hasRole('super-admin');
+        return $user->hasRole('super_admin');
     }
 }

@@ -18,7 +18,7 @@ class SendMessageAction
 
     public function execute(User $user, ChatChannel $channel, string $message, ?string $attachmentUrl = null): ChatMessage
     {
-        if ($user->isBanned() || $user->isSuspended()) {
+        if ($user->isBanned() || $user->isSuspended() || $user->isMuted()) {
             throw new InvalidArgumentException('Suspended or banned users cannot send chat messages.');
         }
 

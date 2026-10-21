@@ -11,7 +11,7 @@ class ChatChannelPolicy
 {
     public function view(User $user, ChatChannel $channel): bool
     {
-        if ($user->hasRole('admin')) {
+        if ($user->hasRole('super_admin')) {
             return true;
         }
 

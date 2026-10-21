@@ -104,12 +104,12 @@ test('payment webhook successfully verifies, completes order and auto-issues sig
     ]);
 
     // Send valid webhook
-    $response = $this->postJson('/api/v1/payments/webhook/telebirr', [
+    $response = $this->postJson('/api/v1/payments/webhook/telebirr', paymentWebhookPayload('telebirr', [
         'reference' => 'TB-REF-998877',
         'status' => 'completed',
         'amount' => 200.00,
-        'signature' => hash_hmac('sha256', 'TB-REF-998877', config('app.key')),
-    ]);
+        'currency' => 'ETB',
+    ]));
 
     $response->assertStatus(200)
         ->assertJson([
@@ -121,7 +121,7 @@ test('payment webhook successfully verifies, completes order and auto-issues sig
     expect($payment->status)->toBe('paid');
 
     $this->order->refresh();
-    expect($this->order->status)->toBe('paid');
+    expect($this->order->status)->toBe('completed');
 
     // Tickets are auto-issued (2 tickets for order)
     $tickets = Ticket::where('ticket_order_id', $this->order->id)->get();
@@ -142,12 +142,12 @@ test('duplicate webhook is acknowledged idempotently without double-issuing tick
         'status' => 'pending',
     ]);
 
-    $payload = [
+    $payload = paymentWebhookPayload('telebirr', [
         'reference' => 'TB-DUP-112233',
         'status' => 'completed',
         'amount' => 200.00,
-        'signature' => hash_hmac('sha256', 'TB-DUP-112233', config('app.key')),
-    ];
+        'currency' => 'ETB',
+    ]);
 
     // First webhook call
     $first = $this->postJson('/api/v1/payments/webhook/telebirr', $payload);
@@ -180,6 +180,7 @@ test('payment webhook fails when signature is invalid', function () {
         'reference' => 'CH-INV-445566',
         'status' => 'completed',
         'amount' => 200.00,
+        'currency' => 'ETB',
         'signature' => 'invalid-tampered-signature',
     ]);
 
@@ -191,4 +192,147 @@ test('payment webhook fails when signature is invalid', function () {
 
     $payment->refresh();
     expect($payment->status)->toBe('pending');
+});
+
+test('unsigned payment webhooks and the historical bypass string are rejected', function () {
+    Payment::create([
+        'ticket_order_id' => $this->order->id,
+        'user_id' => $this->buyer->id,
+        'provider' => 'mpesa',
+        'provider_reference' => 'MP-OPEN-1',
+        'amount' => 200.00,
+        'currency' => 'ETB',
+        'status' => 'pending',
+    ]);
+
+    $missing = $this->postJson('/api/v1/payments/webhook/mpesa', [
+        'reference' => 'MP-OPEN-1',
+        'status' => 'completed',
+        'amount' => 200.00,
+        'currency' => 'ETB',
+    ]);
+    $missing->assertStatus(400);
+
+    $bypass = $this->postJson('/api/v1/payments/webhook/telebirr', [
+        'reference' => 'TB-REF-998877',
+        'status' => 'completed',
+        'amount' => 200.00,
+        'currency' => 'ETB',
+        'signature' => 'valid_signature',
+    ]);
+    $bypass->assertStatus(400);
+
+    expect(Ticket::where('ticket_order_id', $this->order->id)->count())->toBe(0);
+});
+
+test('a webhook with the wrong amount does not issue tickets', function () {
+    Payment::create([
+        'ticket_order_id' => $this->order->id,
+        'user_id' => $this->buyer->id,
+        'provider' => 'chapa',
+        'provider_reference' => 'CH-AMT-1',
+        'amount' => 200.00,
+        'currency' => 'ETB',
+        'status' => 'pending',
+    ]);
+
+    $response = $this->postJson('/api/v1/payments/webhook/chapa', paymentWebhookPayload('chapa', [
+        'reference' => 'CH-AMT-1',
+        'status' => 'completed',
+        'amount' => 1.00,
+        'currency' => 'ETB',
+    ]));
+
+    $response->assertStatus(400);
+    expect(Ticket::where('ticket_order_id', $this->order->id)->count())->toBe(0);
+});
+
+test('a buyer cannot initiate payment for another users order', function () {
+    $stranger = User::factory()->create();
+
+    $this->actingAs($stranger, 'sanctum')->postJson('/api/v1/payments/initiate', [
+        'order_id' => $this->order->id,
+        'provider' => 'telebirr',
+    ])->assertForbidden();
+});
+
+test('reconciling a paid order does not issue a second set of tickets', function () {
+    $payment = Payment::create([
+        'ticket_order_id' => $this->order->id,
+        'user_id' => $this->buyer->id,
+        'provider' => 'telebirr',
+        'provider_reference' => 'TB-RECON-1',
+        'amount' => 200.00,
+        'currency' => 'ETB',
+        'status' => 'pending',
+    ]);
+
+    $this->postJson('/api/v1/payments/webhook/telebirr', paymentWebhookPayload('telebirr', [
+        'reference' => 'TB-RECON-1',
+        'status' => 'completed',
+        'amount' => 200.00,
+        'currency' => 'ETB',
+    ]))->assertOk();
+
+    $this->actingAs($this->buyer, 'sanctum')
+        ->postJson("/api/v1/payments/{$payment->id}/reconcile")
+        ->assertOk();
+
+    expect(Ticket::where('ticket_order_id', $this->order->id)->count())->toBe(2);
+});
+
+test('a correctly signed webhook is rejected when live provider verification is not enabled', function () {
+    config(['services.payments.sandbox' => false]);
+
+    Payment::create([
+        'ticket_order_id' => $this->order->id,
+        'user_id' => $this->buyer->id,
+        'provider' => 'chapa',
+        'provider_reference' => 'CH-LIVE-1',
+        'amount' => 200.00,
+        'currency' => 'ETB',
+        'status' => 'pending',
+    ]);
+
+    $this->postJson('/api/v1/payments/webhook/chapa', paymentWebhookPayload('chapa', [
+        'reference' => 'CH-LIVE-1',
+        'status' => 'completed',
+        'amount' => 200.00,
+        'currency' => 'ETB',
+    ]))->assertStatus(400);
+
+    expect(Ticket::where('ticket_order_id', $this->order->id)->count())->toBe(0);
+});
+
+test('a webhook with the wrong currency does not issue tickets', function () {
+    Payment::create([
+        'ticket_order_id' => $this->order->id,
+        'user_id' => $this->buyer->id,
+        'provider' => 'chapa',
+        'provider_reference' => 'CH-CUR-1',
+        'amount' => 200.00,
+        'currency' => 'ETB',
+        'status' => 'pending',
+    ]);
+
+    $this->postJson('/api/v1/payments/webhook/chapa', paymentWebhookPayload('chapa', [
+        'reference' => 'CH-CUR-1',
+        'status' => 'completed',
+        'amount' => 200.00,
+        'currency' => 'USD',
+    ]))->assertStatus(400);
+
+    expect(Ticket::where('ticket_order_id', $this->order->id)->count())->toBe(0);
+});
+
+test('an unsupported payment provider webhook fails closed', function () {
+    $this->postJson('/api/v1/payments/webhook/stripe', [
+        'reference' => 'ST-1',
+        'status' => 'completed',
+        'amount' => 200.00,
+        'currency' => 'ETB',
+        'signature' => 'anything',
+    ])->assertStatus(400);
+
+    expect(Ticket::where('ticket_order_id', $this->order->id)->count())->toBe(0);
 });

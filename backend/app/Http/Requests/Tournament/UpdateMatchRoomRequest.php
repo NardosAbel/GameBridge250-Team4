@@ -12,7 +12,7 @@ class UpdateMatchRoomRequest extends FormRequest
         $user = $this->user();
         $tournament = $match->tournament;
 
-        return $user->hasRole('super-admin')
+        return $user->hasRole('super_admin')
             || $tournament->organizer_id === $user->id
             || $tournament->staff()->where('user_id', $user->id)->exists()
             || $match->referee_id === $user->id;

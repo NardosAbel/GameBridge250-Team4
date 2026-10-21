@@ -6,6 +6,7 @@ use App\Domain\Tournaments\Actions\GenerateBracketAction;
 use App\Domain\Tournaments\Models\Ranking;
 use App\Domain\Tournaments\Models\RankingSnapshot;
 use App\Domain\Tournaments\Models\Season;
+use App\Domain\Tournaments\Models\TournamentRankingAward;
 use App\Domain\Tournaments\Models\TournamentRegistration;
 use App\Domain\Tournaments\Services\RankingCalculationService;
 use App\Domain\Tournaments\Services\StandingsService;
@@ -18,7 +19,7 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     Role::findOrCreate('organizer');
     Role::findOrCreate('player');
-    Role::findOrCreate('super-admin');
+    Role::findOrCreate('super_admin');
 
     $this->organizer = User::factory()->create();
     $this->organizer->assignRole('organizer');
@@ -137,6 +138,50 @@ test('ranking calculation service awards placement points and updates leaderboar
         ->and($p2Ranking)->not->toBeNull()
         ->and($p2Ranking->points)->toBe(50)
         ->and($p2Ranking->rank)->toBe(2);
+
+    $service->awardTournamentPoints($tournament->fresh());
+
+    expect($p1Ranking->fresh()->points)->toBe(100)
+        ->and($p2Ranking->fresh()->points)->toBe(50)
+        ->and(TournamentRankingAward::where('tournament_id', $tournament->id)->count())->toBe(2);
+});
+
+test('lowering or clearing points_awarded reverses prior ranking awards', function () {
+    $tournament = app(CreateTournamentAction::class)->execute($this->organizer, [
+        'title' => 'Correction Cup',
+        'game_id' => $this->game->id,
+        'format' => 'single_elimination',
+        'capacity' => 2,
+        'starts_at' => now()->addDays(1),
+    ]);
+
+    $p1 = User::factory()->create();
+    $reg = TournamentRegistration::create([
+        'tournament_id' => $tournament->id,
+        'user_id' => $p1->id,
+        'status' => 'approved',
+        'placement' => 1,
+        'points_awarded' => 100,
+    ]);
+
+    $service = app(RankingCalculationService::class);
+    $service->awardTournamentPoints($tournament);
+
+    $ranking = Ranking::where('game_id', $this->game->id)->where('user_id', $p1->id)->first();
+    expect($ranking->points)->toBe(100)
+        ->and(TournamentRankingAward::where('tournament_id', $tournament->id)->value('points'))->toBe(100);
+
+    $reg->update(['points_awarded' => 40]);
+    $service->awardTournamentPoints($tournament->fresh());
+
+    expect($ranking->fresh()->points)->toBe(40)
+        ->and(TournamentRankingAward::where('tournament_id', $tournament->id)->value('points'))->toBe(40);
+
+    $reg->update(['points_awarded' => 0]);
+    $service->awardTournamentPoints($tournament->fresh());
+
+    expect($ranking->fresh()->points)->toBe(0)
+        ->and(TournamentRankingAward::where('tournament_id', $tournament->id)->count())->toBe(0);
 });
 
 test('can take immutable ranking snapshot and query through api', function () {

@@ -15,7 +15,7 @@ class UpdateMatchRoomAction
         $isStaff = $tournament->organizer_id === $actor->id
             || $tournament->staff()->where('user_id', $actor->id)->exists()
             || $match->referee_id === $actor->id
-            || $actor->hasRole('super-admin');
+            || $actor->hasRole('super_admin');
 
         if (! $isStaff) {
             throw new AuthorizationException('Only tournament staff or referees can update game room credentials.');

@@ -8,7 +8,7 @@ class TakeModerationActionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null && $this->user()->hasAnyRole(['admin', 'moderator']);
+        return $this->user() !== null && $this->user()->hasAnyRole(['super_admin', 'moderator']);
     }
 
     public function rules(): array

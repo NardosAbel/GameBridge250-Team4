@@ -2,12 +2,14 @@
 
 namespace App\Domain\Payments\Services;
 
+use App\Domain\Identity\Enums\RoleEnum;
 use App\Domain\Identity\Services\AuditLogger;
 use App\Domain\Notifications\Notifications\GenericNotification;
 use App\Domain\Notifications\Services\NotificationService;
 use App\Domain\Payments\Gateways\PaymentGatewayManager;
 use App\Domain\Payments\Models\Payment;
 use App\Domain\Payments\Models\Refund;
+use App\Domain\Ticketing\Actions\ReleaseTicketInventoryAction;
 use App\Domain\Ticketing\Models\TicketOrder;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -18,7 +20,8 @@ class RefundService
 {
     public function __construct(
         protected PaymentGatewayManager $gatewayManager,
-        protected NotificationService $notificationService
+        protected NotificationService $notificationService,
+        protected ReleaseTicketInventoryAction $releaseTicketInventoryAction,
     ) {}
 
     /**
@@ -31,7 +34,7 @@ class RefundService
         string $reason,
         ?string $reasonCategory = 'attendee_request'
     ): Refund {
-        if ($order->user_id !== $requester->id && ! $requester->hasRole('super-admin')) {
+        if ($order->user_id !== $requester->id && ! $requester->hasRole(RoleEnum::SUPER_ADMIN->value)) {
             throw new AuthorizationException('You can only request refunds for your own orders.');
         }
 
@@ -44,9 +47,12 @@ class RefundService
         }
 
         $payment = $order->payments()->where('status', 'paid')->latest()->first();
+        if ($payment === null && (float) $order->total_amount > 0) {
+            throw new InvalidArgumentException('This order has no settled payment to refund.');
+        }
 
         $refund = Refund::create([
-            'payment_id' => $payment?->id ?? 0,
+            'payment_id' => $payment?->id,
             'ticket_order_id' => $order->id,
             'requested_by_id' => $requester->id,
             'amount' => $amount,
@@ -81,7 +87,7 @@ class RefundService
     ): Refund {
         $order = $refund->order;
         $event = $order?->event;
-        $isAuthorized = $processor->hasRole('super-admin')
+        $isAuthorized = $processor->hasRole(RoleEnum::SUPER_ADMIN->value)
             || ($event && $event->organizer_id === $processor->id)
             || ($event && $event->venue && $event->venue->isStaff($processor, 'manager'));
 
@@ -128,16 +134,20 @@ class RefundService
 
             // 1. Process via Payment Gateway if payment exists
             $payment = $refund->payment;
+            $providerSettled = false;
             if ($payment && $payment->provider) {
                 $gateway = $this->gatewayManager->driver($payment->provider);
-                $gateway->refund($payment, (float) $refund->amount, $refund->reason);
+                $providerResult = $gateway->refund($payment, (float) $refund->amount, $refund->reason);
+                $providerSettled = (bool) ($providerResult['success'] ?? false);
             }
 
-            // 2. Revoke associated tickets (set status = 'refunded')
             if ($order) {
                 $order->tickets()->update(['status' => 'refunded']);
 
                 $isFullRefund = ((float) $refund->amount >= (float) $order->total_amount);
+                if ($isFullRefund) {
+                    $this->releaseTicketInventoryAction->execute($order);
+                }
                 $order->update([
                     'status' => $isFullRefund ? 'refunded' : 'partially_refunded',
                 ]);
@@ -164,6 +174,7 @@ class RefundService
                 metadata: [
                     'amount' => $refund->amount,
                     'order_id' => $order?->id,
+                    'provider_settled' => $providerSettled,
                 ]
             );
 

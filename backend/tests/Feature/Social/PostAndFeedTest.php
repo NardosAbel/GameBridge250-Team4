@@ -73,7 +73,7 @@ test('user can create a poll and vote on it', function () {
         'option_index' => 1,
     ]);
 
-    $secondVote->assertStatus(500); // InvalidArgumentException caught
+    $secondVote->assertStatus(422);
 });
 
 test('feed returns personalized posts from followed users', function () {

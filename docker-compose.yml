@@ -25,6 +25,8 @@ services:
       - MAIL_MAILER=smtp
       - MAIL_HOST=mailpit
       - MAIL_PORT=1025
+      # Local/dev only. Production must set PAYMENTS_SANDBOX=false in the real .env.
+      - PAYMENTS_SANDBOX=true
     depends_on:
       postgres:
         condition: service_healthy
@@ -98,6 +100,22 @@ services:
     depends_on:
       - app
       - redis
+    networks:
+      - campus_network
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: campus_esports_scheduler
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./backend:/var/www/html
+    command: php artisan schedule:work
+    depends_on:
+      - app
+      - postgres
     networks:
       - campus_network
 

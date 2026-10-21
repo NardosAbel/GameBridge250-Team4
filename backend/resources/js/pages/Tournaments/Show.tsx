@@ -293,7 +293,7 @@ export default function TournamentShow({ tournamentId }: Props) {
 
     const isOrganizer = auth?.user && (
         tournament.organizer?.id === auth.user.id ||
-        auth.user.roles?.includes('super-admin')
+        auth.user.roles?.includes('super_admin')
     );
 
     return (

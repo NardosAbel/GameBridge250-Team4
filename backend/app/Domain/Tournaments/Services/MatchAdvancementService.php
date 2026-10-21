@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\DB;
 class MatchAdvancementService
 {
     public function __construct(
-        protected RankingCalculationService $rankingService
+        protected RankingCalculationService $rankingService,
+        protected FormatProgressionService $formatProgressionService,
     ) {}
 
     /**
@@ -43,8 +44,10 @@ class MatchAdvancementService
                 $this->propagateToNextNode($node->loser_next_node_id, $loserId, $participantType, $node->node_order);
             }
 
+            $this->formatProgressionService->progress($match->tournament->fresh() ?? $match->tournament);
+
             // 3. Check if all tournament matches are completed
-            $this->checkTournamentCompletion($match->tournament);
+            $this->checkTournamentCompletion($match->tournament->fresh() ?? $match->tournament);
         });
     }
 
@@ -55,27 +58,54 @@ class MatchAdvancementService
     {
         DB::transaction(function () use ($match) {
             $node = $match->bracketNode;
-            if (! $node || ! $node->next_node_id) {
+            if (! $node) {
                 return;
             }
 
-            $targetMatch = TournamentMatch::where('bracket_node_id', $node->next_node_id)->first();
-            if ($targetMatch) {
-                $previousWinnerId = $match->winner_id;
-
-                if ($targetMatch->participant1_id === $previousWinnerId) {
-                    $targetMatch->update(['participant1_id' => null, 'status' => 'pending']);
-                } elseif ($targetMatch->participant2_id === $previousWinnerId) {
-                    $targetMatch->update(['participant2_id' => null, 'status' => 'pending']);
-                }
-
-                // If target match was completed, recursively revert its downstream matches too!
-                if ($targetMatch->status === 'completed') {
-                    $targetMatch->update(['winner_id' => null, 'status' => 'pending']);
-                    $this->revertDownstream($targetMatch);
-                }
+            $loserId = null;
+            if ($match->winner_id && (int) $match->winner_id === (int) $match->participant1_id) {
+                $loserId = $match->participant2_id;
+            } elseif ($match->winner_id && (int) $match->winner_id === (int) $match->participant2_id) {
+                $loserId = $match->participant1_id;
             }
+
+            $this->clearPropagatedParticipant($node->next_node_id, $match->winner_id);
+            $this->clearPropagatedParticipant($node->loser_next_node_id, $loserId);
         });
+    }
+
+    private function clearPropagatedParticipant(?int $nodeId, ?int $participantId): void
+    {
+        if (! $nodeId || ! $participantId) {
+            return;
+        }
+
+        $targetMatch = TournamentMatch::where('bracket_node_id', $nodeId)->lockForUpdate()->first();
+        if (! $targetMatch) {
+            return;
+        }
+
+        if ($targetMatch->status === 'completed') {
+            $this->revertDownstream($targetMatch);
+            $targetMatch->refresh();
+        }
+
+        $updates = [];
+        if ((int) $targetMatch->participant1_id === (int) $participantId) {
+            $updates['participant1_id'] = null;
+        }
+        if ((int) $targetMatch->participant2_id === (int) $participantId) {
+            $updates['participant2_id'] = null;
+        }
+
+        if ($updates === [] && $targetMatch->status !== 'completed') {
+            return;
+        }
+
+        $updates['winner_id'] = null;
+        $updates['status'] = 'pending';
+        $updates['completed_at'] = null;
+        $targetMatch->update($updates);
     }
 
     /**
@@ -101,18 +131,17 @@ class MatchAdvancementService
         }
 
         if ($targetMatch) {
-            // Fill slot 1 or slot 2 based on parity of source node order or first available slot
-            if ($sourceNodeOrder % 2 !== 0) {
-                $targetMatch->update([
-                    'participant1_id' => $participantId,
-                    'participant1_type' => $type,
-                ]);
-            } else {
-                $targetMatch->update([
-                    'participant2_id' => $participantId,
-                    'participant2_type' => $type,
-                ]);
+            $preferred = ($sourceNodeOrder % 2 !== 0) ? 'participant1_id' : 'participant2_id';
+            $alternate = $preferred === 'participant1_id' ? 'participant2_id' : 'participant1_id';
+            $slot = $preferred;
+            if ($targetMatch->{$preferred} && (int) $targetMatch->{$preferred} !== (int) $participantId && ! $targetMatch->{$alternate}) {
+                $slot = $alternate;
             }
+
+            $targetMatch->update([
+                $slot => $participantId,
+                str_replace('_id', '_type', $slot) => $type,
+            ]);
 
             // If both participants are present, mark match ready!
             $targetMatch->refresh();

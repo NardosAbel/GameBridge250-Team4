@@ -17,18 +17,18 @@ class TicketPolicy
         return $ticket->user_id === $user->id
             || ($ticket->event && $ticket->event->organizer_id === $user->id)
             || ($ticket->venue && $ticket->venue->isStaff($user))
-            || $user->hasRole('super-admin');
+            || $user->hasRole('super_admin');
     }
 
     public function transfer(User $user, Ticket $ticket): bool
     {
-        return $ticket->user_id === $user->id || $user->hasRole('super-admin');
+        return $ticket->user_id === $user->id || $user->hasRole('super_admin');
     }
 
     public function revoke(User $user, Ticket $ticket): bool
     {
         return ($ticket->event && $ticket->event->organizer_id === $user->id)
             || ($ticket->venue && $ticket->venue->isStaff($user, 'manager'))
-            || $user->hasRole('super-admin');
+            || $user->hasRole('super_admin');
     }
 }

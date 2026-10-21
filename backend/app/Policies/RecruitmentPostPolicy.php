@@ -19,11 +19,11 @@ class RecruitmentPostPolicy
 
     public function update(User $user, RecruitmentPost $post): bool
     {
-        return $user->id === $post->user_id || $user->hasRole('admin');
+        return $user->id === $post->user_id || $user->hasRole('super_admin');
     }
 
     public function delete(User $user, RecruitmentPost $post): bool
     {
-        return $user->id === $post->user_id || $user->hasRole('admin');
+        return $user->id === $post->user_id || $user->hasRole('super_admin');
     }
 }

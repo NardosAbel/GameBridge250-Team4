@@ -75,6 +75,14 @@ class TicketScanService
                 ];
             }
 
+            if (! $ticket->event_id && ! $scanner->hasRole('super_admin')) {
+                throw new AuthorizationException('This ticket is not assigned to an event.');
+            }
+
+            if ($ticket->event_id) {
+                $this->authorizeScanner($scanner, null, (int) $ticket->event_id);
+            }
+
             // 4. Check for Wrong Event
             if ($eventId && $ticket->event_id && (int) $ticket->event_id !== (int) $eventId) {
                 $this->logScan($ticket, $scanner, 'wrong_event', $venueId, $eventId, $deviceId, $scannedAtTime);
@@ -243,29 +251,26 @@ class TicketScanService
      */
     protected function authorizeScanner(User $scanner, ?int $venueId = null, ?int $eventId = null): void
     {
-        if ($scanner->hasRole('super-admin')) {
+        if ($scanner->hasRole('super_admin')) {
             return;
         }
 
-        // Venue-scoped permission
-        if ($venueId) {
-            $venue = Venue::find($venueId);
-            if ($venue && $venue->isStaff($scanner)) {
-                return;
-            }
+        if ($eventId === null && $venueId === null) {
+            throw new AuthorizationException('A scanner must be assigned to the event or venue being scanned.');
         }
 
-        // Event-scoped permission
         if ($eventId) {
-            $event = Event::find($eventId);
+            $event = Event::query()->with('venue')->find($eventId);
             if ($event && ($event->organizer_id === $scanner->id || ($event->venue && $event->venue->isStaff($scanner)))) {
                 return;
             }
         }
 
-        // General staff check
-        if ($scanner->hasRole(['organizer', 'referee'])) {
-            return;
+        if ($venueId) {
+            $venue = Venue::find($venueId);
+            if ($venue && $venue->isStaff($scanner)) {
+                return;
+            }
         }
 
         throw new AuthorizationException('You are not authorized to scan tickets for this venue or event.');

@@ -17,7 +17,7 @@ class TournamentMatchPolicy
      */
     public function viewRoom(User $user, TournamentMatch $match): bool
     {
-        if ($user->hasRole('super-admin')) {
+        if ($user->hasRole('super_admin')) {
             return true;
         }
 
@@ -45,7 +45,7 @@ class TournamentMatchPolicy
 
     public function submitResult(User $user, TournamentMatch $match): bool
     {
-        if ($user->hasRole('super-admin')) {
+        if ($user->hasRole('super_admin')) {
             return true;
         }
 
@@ -63,7 +63,7 @@ class TournamentMatchPolicy
 
     public function overrideResult(User $user, TournamentMatch $match): bool
     {
-        if ($user->hasRole('super-admin')) {
+        if ($user->hasRole('super_admin')) {
             return true;
         }
 

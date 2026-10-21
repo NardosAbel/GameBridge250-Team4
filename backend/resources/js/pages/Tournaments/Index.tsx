@@ -84,7 +84,7 @@ export default function TournamentIndex() {
         registration_end_at: new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 16),
     });
 
-    const isOrganizer = auth?.user?.roles?.some((r: string) => ['organizer', 'super-admin'].includes(r));
+    const isOrganizer = auth?.user?.roles?.some((r: string) => ['organizer', 'super_admin'].includes(r));
 
     const fetchTournaments = async () => {
         setLoading(true);

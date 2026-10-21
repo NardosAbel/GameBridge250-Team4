@@ -18,7 +18,7 @@ class CommunityPolicy
             return false;
         }
 
-        if ($user->id === $community->creator_id || $user->hasAnyRole(['admin', 'moderator'])) {
+        if ($user->id === $community->creator_id || $user->hasAnyRole(['super_admin', 'moderator'])) {
             return true;
         }
 
@@ -35,7 +35,7 @@ class CommunityPolicy
 
     public function update(User $user, Community $community): bool
     {
-        if ($user->id === $community->creator_id || $user->hasRole('admin')) {
+        if ($user->id === $community->creator_id || $user->hasRole('super_admin')) {
             return true;
         }
 
@@ -53,6 +53,6 @@ class CommunityPolicy
 
     public function delete(User $user, Community $community): bool
     {
-        return $user->id === $community->creator_id || $user->hasRole('admin');
+        return $user->id === $community->creator_id || $user->hasRole('super_admin');
     }
 }

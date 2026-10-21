@@ -64,8 +64,10 @@ class AuthController extends Controller
         return redirect()->route('verification.notice', [
             'recipient' => $recipient,
             'type' => $otpType,
-            'devCode' => $result['otp']['code'] ?? null,
-        ])->with('success', 'Registration successful! Please verify your account.');
+        ])->with([
+            'success' => 'Registration successful! Please verify your account.',
+            'devCode' => $this->localOtpCode($result['otp']['code'] ?? null),
+        ]);
     }
 
     public function showVerifyOtp(Request $request): Response
@@ -73,7 +75,7 @@ class AuthController extends Controller
         return Inertia::render('Auth/VerifyOtp', [
             'recipient' => $request->query('recipient', $request->user()?->email ?? $request->user()?->phone),
             'type' => $request->query('type', 'email_verification'),
-            'devCode' => $request->query('devCode'),
+            'devCode' => $this->localOtpCode(session('devCode')),
         ]);
     }
 
@@ -102,7 +104,7 @@ class AuthController extends Controller
 
         return back()->with([
             'success' => 'A new 6-digit verification code has been dispatched.',
-            'devCode' => $otp['code'] ?? null,
+            'devCode' => $this->localOtpCode($otp['code'] ?? null),
         ]);
     }
 
@@ -127,8 +129,17 @@ class AuthController extends Controller
             'recipient' => $request->recipient,
         ])->with([
             'success' => 'Password reset code dispatched.',
-            'devCode' => $otp['code'] ?? null,
+            'devCode' => $this->localOtpCode($otp['code'] ?? null),
         ]);
+    }
+
+    private function localOtpCode(mixed $code): ?string
+    {
+        if (! app()->environment(['local', 'testing']) || ! is_string($code) || $code === '') {
+            return null;
+        }
+
+        return $code;
     }
 
     public function showResetPassword(Request $request): Response

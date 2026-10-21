@@ -16,11 +16,11 @@ class TicketOrderPolicy
     {
         return $order->user_id === $user->id
             || ($order->event && $order->event->organizer_id === $user->id)
-            || $user->hasRole('super-admin');
+            || $user->hasRole('super_admin');
     }
 
     public function requestRefund(User $user, TicketOrder $order): bool
     {
-        return $order->user_id === $user->id || $user->hasRole('super-admin');
+        return $order->user_id === $user->id || $user->hasRole('super_admin');
     }
 }

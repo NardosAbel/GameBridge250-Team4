@@ -36,10 +36,10 @@ class UpdateVenueAction
             'pricing_details' => $data['pricing_details'] ?? $venue->pricing_details,
             'currency' => $data['currency'] ?? $venue->currency,
             'photos' => $data['photos'] ?? $venue->photos,
-            'is_featured' => isset($data['is_featured']) && $actor->hasRole('super-admin')
+            'is_featured' => isset($data['is_featured']) && $actor->hasRole('super_admin')
                 ? $data['is_featured']
                 : $venue->is_featured,
-            'verified' => isset($data['verified']) && $actor->hasRole('super-admin')
+            'verified' => isset($data['verified']) && $actor->hasRole('super_admin')
                 ? $data['verified']
                 : $venue->verified,
         ], fn ($val) => $val !== null));

@@ -13,7 +13,7 @@ class UpdateEventAction
     {
         $canUpdate = $event->organizer_id === $actor->id
             || ($event->venue && $event->venue->isStaff($actor, 'manager'))
-            || $actor->hasRole('super-admin');
+            || $actor->hasRole('super_admin');
 
         if (! $canUpdate) {
             throw new AuthorizationException('You are not authorized to update this event.');

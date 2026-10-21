@@ -4,52 +4,39 @@ namespace App\Domain\Payments\Gateways;
 
 use App\Domain\Payments\Contracts\PaymentGatewayInterface;
 use App\Domain\Payments\Models\Payment;
-use Illuminate\Support\Str;
+use App\Domain\Payments\Support\GatewayCheckout;
+use App\Domain\Payments\Support\WebhookAuthenticator;
 
 class BankTransferGateway implements PaymentGatewayInterface
 {
+    public function __construct(private readonly WebhookAuthenticator $authenticator) {}
+
     public function charge(Payment $payment, array $options = []): array
     {
-        $ref = 'BANK-'.strtoupper(Str::random(10));
+        $accounts = config('services.payments.providers.bank_transfer.accounts', []);
 
-        return [
-            'success' => true,
-            'status' => 'pending',
-            'transaction_reference' => $ref,
-            'redirect_url' => null,
-            'message' => 'Please transfer the exact amount to Commercial Bank of Ethiopia (CBE) Account: 1000234567890 or Awash Bank: 01320876543200 and attach slip reference.',
-            'raw' => [
-                'bank_accounts' => [
-                    ['bank' => 'Commercial Bank of Ethiopia', 'account' => '1000234567890', 'name' => 'Campus Esports Ethiopia'],
-                    ['bank' => 'Awash Bank', 'account' => '01320876543200', 'name' => 'Campus Esports Ethiopia'],
-                ],
-                'reference_code' => $ref,
-            ],
-        ];
+        return GatewayCheckout::start(
+            $payment,
+            'bank_transfer',
+            'BANK',
+            'Bank transfer reference created. The buyer must use the configured settlement account.',
+            ['accounts' => is_array($accounts) ? $accounts : []],
+        );
     }
 
     public function verifyWebhook(array $payload, ?string $signature = null, array $headers = []): array
     {
-        $ref = $payload['reference_code'] ?? $payload['transaction_reference'] ?? null;
-        $status = strtolower((string) ($payload['status'] ?? 'paid'));
-
-        $isPaid = ($status === 'paid' || $status === 'verified');
-
-        return [
-            'valid' => true,
-            'event_type' => $isPaid ? 'payment.success' : 'payment.failed',
-            'provider_reference' => $ref,
-            'status' => $isPaid ? 'paid' : 'failed',
-            'error' => null,
-        ];
+        return $this->authenticator->authenticate(
+            provider: 'bank_transfer',
+            payload: $payload,
+            signature: $signature,
+            referenceKeys: ['reference_code', 'transaction_reference', 'reference'],
+            paidStatuses: ['paid', 'verified', 'completed', 'success'],
+        );
     }
 
     public function refund(Payment $payment, float $amount, string $reason): array
     {
-        return [
-            'success' => true,
-            'refund_reference' => 'BNK-REF-'.strtoupper(Str::random(8)),
-            'message' => "Bank transfer refund of {$amount} {$payment->currency} marked for wire reversal.",
-        ];
+        return GatewayCheckout::refund('bank_transfer', $amount, (string) $payment->currency);
     }
 }

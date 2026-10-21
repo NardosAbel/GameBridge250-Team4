@@ -7,6 +7,7 @@ use App\Domain\Ticketing\Actions\CreateTicketTypeAction;
 use App\Domain\Ticketing\Actions\TransferTicketAction;
 use App\Domain\Ticketing\Models\Ticket;
 use App\Domain\Ticketing\Models\TicketType;
+use App\Domain\Ticketing\Services\TicketReportAuthorizer;
 use App\Domain\Ticketing\Services\TicketReportingService;
 use App\Domain\Ticketing\Services\TicketScanService;
 use App\Http\Controllers\Controller;
@@ -100,7 +101,7 @@ class TicketController extends Controller
 
     public function showTicket(Ticket $ticket, Request $request): JsonResponse
     {
-        if ($ticket->user_id !== $request->user()->id && ! $request->user()->hasRole('super-admin')) {
+        if ($ticket->user_id !== $request->user()->id && ! $request->user()->hasRole('super_admin')) {
             abort(403, 'Unauthorized.');
         }
 
@@ -165,11 +166,15 @@ class TicketController extends Controller
         ]);
     }
 
-    public function reports(Request $request, TicketReportingService $reportingService): JsonResponse
+    public function reports(Request $request, TicketReportingService $reportingService, TicketReportAuthorizer $authorizer): JsonResponse
     {
+        $eventId = $request->filled('event_id') ? (int) $request->input('event_id') : null;
+        $tournamentId = $request->filled('tournament_id') ? (int) $request->input('tournament_id') : null;
+        $authorizer->authorize($request->user(), $eventId, $tournamentId);
+
         $report = $reportingService->generateReport(
-            eventId: $request->input('event_id'),
-            tournamentId: $request->input('tournament_id')
+            eventId: $eventId,
+            tournamentId: $tournamentId
         );
 
         return response()->json([
@@ -178,11 +183,15 @@ class TicketController extends Controller
         ]);
     }
 
-    public function exportCsv(Request $request, TicketReportingService $reportingService): StreamedResponse
+    public function exportCsv(Request $request, TicketReportingService $reportingService, TicketReportAuthorizer $authorizer): StreamedResponse
     {
+        $eventId = $request->filled('event_id') ? (int) $request->input('event_id') : null;
+        $tournamentId = $request->filled('tournament_id') ? (int) $request->input('tournament_id') : null;
+        $authorizer->authorize($request->user(), $eventId, $tournamentId);
+
         $csv = $reportingService->exportCsv(
-            eventId: $request->input('event_id'),
-            tournamentId: $request->input('tournament_id')
+            eventId: $eventId,
+            tournamentId: $tournamentId
         );
 
         $filename = 'attendance-report-'.now()->format('Y-m-d').'.csv';

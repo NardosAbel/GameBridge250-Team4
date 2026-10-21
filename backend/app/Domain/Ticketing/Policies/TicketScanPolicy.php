@@ -10,7 +10,7 @@ class TicketScanPolicy
 {
     public function scan(User $user, ?Venue $venue = null, ?Event $event = null): bool
     {
-        if ($user->hasRole('super-admin')) {
+        if ($user->hasRole('super_admin')) {
             return true;
         }
 

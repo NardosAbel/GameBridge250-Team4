@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Identity\Enums\RoleEnum;
 use App\Domain\Payments\Models\Payment;
 use App\Domain\Payments\Models\Payout;
 use App\Domain\Payments\Models\Refund;
@@ -9,6 +10,7 @@ use App\Domain\Payments\Services\PaymentProcessingService;
 use App\Domain\Payments\Services\PayoutService;
 use App\Domain\Payments\Services\RefundService;
 use App\Domain\Ticketing\Models\TicketOrder;
+use App\Domain\Venues\Models\Event;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Payments\InitiatePaymentRequest;
 use App\Http\Requests\Payments\ProcessRefundRequest;
@@ -63,8 +65,19 @@ class PaymentController extends Controller
         ], $isFailed ? 400 : 200);
     }
 
-    public function reconcile(Payment $payment, PaymentProcessingService $processingService): JsonResponse
+    public function reconcile(Request $request, Payment $payment, PaymentProcessingService $processingService): JsonResponse
     {
+        $user = $request->user();
+        $order = $payment->order;
+        $event = $order?->event_id ? Event::query()->find($order->event_id) : null;
+        $allowed = $user->hasRole(RoleEnum::SUPER_ADMIN->value)
+            || $payment->user_id === $user->id
+            || ($event && $event->organizer_id === $user->id);
+
+        if (! $allowed) {
+            abort(403, 'You cannot reconcile this payment.');
+        }
+
         $reconciled = $processingService->reconcilePayment($payment);
 
         return response()->json([
@@ -126,7 +139,7 @@ class PaymentController extends Controller
 
     public function processPayout(Request $request, Payout $payout, PayoutService $payoutService): JsonResponse
     {
-        if (! $request->user()->hasRole('super-admin')) {
+        if (! $request->user()->hasRole(RoleEnum::SUPER_ADMIN->value)) {
             abort(403, 'Unauthorized.');
         }
 

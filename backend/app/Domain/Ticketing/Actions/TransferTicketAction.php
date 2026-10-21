@@ -21,7 +21,7 @@ class TransferTicketAction
 
     public function execute(User $currentUser, Ticket $ticket, User $recipient): Ticket
     {
-        if ($ticket->user_id !== $currentUser->id && ! $currentUser->hasRole('super-admin')) {
+        if ($ticket->user_id !== $currentUser->id && ! $currentUser->hasRole('super_admin')) {
             throw new AuthorizationException('You can only transfer tickets you own.');
         }
 

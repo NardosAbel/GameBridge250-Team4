@@ -7,6 +7,7 @@ use App\Domain\Notifications\Notifications\GenericNotification;
 use App\Domain\Notifications\Services\NotificationService;
 use App\Domain\Tournaments\Models\Dispute;
 use App\Domain\Tournaments\Models\TournamentMatch;
+use App\Domain\Tournaments\Services\MatchAdvancementService;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,8 @@ use InvalidArgumentException;
 class OpenDisputeAction
 {
     public function __construct(
-        protected NotificationService $notificationService
+        protected NotificationService $notificationService,
+        protected MatchAdvancementService $advancementService,
     ) {}
 
     public function execute(User $actor, TournamentMatch $match, array $data): Dispute
@@ -29,6 +31,10 @@ class OpenDisputeAction
         }
 
         return DB::transaction(function () use ($actor, $match, $data) {
+            if ($match->winner_id) {
+                $this->advancementService->revertDownstream($match);
+            }
+
             $dispute = Dispute::create([
                 'match_id' => $match->id,
                 'raised_by_id' => $actor->id,

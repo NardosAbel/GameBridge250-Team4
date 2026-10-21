@@ -3,6 +3,7 @@
 use App\Domain\Profiles\Models\Game;
 use App\Domain\Tournaments\Actions\CreateTournamentAction;
 use App\Domain\Tournaments\Actions\GenerateBracketAction;
+use App\Domain\Tournaments\Actions\UpdateTournamentStatusAction;
 use App\Domain\Tournaments\Models\TournamentRegistration;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -13,7 +14,7 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     Role::findOrCreate('organizer');
     Role::findOrCreate('player');
-    Role::findOrCreate('super-admin');
+    Role::findOrCreate('super_admin');
 
     $this->organizer = User::factory()->create();
     $this->organizer->assignRole('organizer');
@@ -230,4 +231,17 @@ test('generates group stage plus knockout bracket structure', function () {
 
     // Playoff bracket has semifinals (2) + final (1) = 3 matches
     expect($tournament->matches()->whereHas('bracketNode', fn ($q) => $q->where('bracket_id', $playoffBracket->id))->count())->toBe(3);
+});
+
+test('incomplete tournament formats cannot be published for play', function () {
+    $tournament = app(CreateTournamentAction::class)->execute($this->organizer, [
+        'title' => 'Swiss Hold',
+        'game_id' => $this->game->id,
+        'format' => 'swiss',
+        'capacity' => 8,
+        'starts_at' => now()->addDays(2),
+    ]);
+
+    expect(fn () => app(UpdateTournamentStatusAction::class)->execute($this->organizer, $tournament, 'published'))
+        ->toThrow(InvalidArgumentException::class);
 });

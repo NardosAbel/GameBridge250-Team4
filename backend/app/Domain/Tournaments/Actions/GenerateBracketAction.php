@@ -22,7 +22,7 @@ class GenerateBracketAction
     {
         $isStaff = $tournament->organizer_id === $actor->id
             || $tournament->staff()->where('user_id', $actor->id)->whereIn('role', ['admin', 'co_organizer'])->exists()
-            || $actor->hasRole('super-admin');
+            || $actor->hasRole('super_admin');
 
         if (! $isStaff) {
             throw new AuthorizationException('Only tournament organizers can generate brackets.');

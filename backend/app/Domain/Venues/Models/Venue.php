@@ -105,7 +105,7 @@ class Venue extends Model
 
     public function isStaff(User $user, ?string $role = null): bool
     {
-        if ($this->owner_id === $user->id || $user->hasRole('super-admin')) {
+        if ($this->owner_id === $user->id || $user->hasRole('super_admin')) {
             return true;
         }
 

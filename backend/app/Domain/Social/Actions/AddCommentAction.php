@@ -17,7 +17,7 @@ class AddCommentAction
 
     public function execute(User $user, Post $post, string $content, ?int $parentId = null): Comment
     {
-        if ($user->isBanned() || $user->isSuspended()) {
+        if ($user->isBanned() || $user->isSuspended() || $user->isMuted()) {
             throw new InvalidArgumentException('Suspended or banned users cannot comment.');
         }
 

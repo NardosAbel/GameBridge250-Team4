@@ -22,7 +22,7 @@ class CheckInTournamentAction
             $isTeamCaptain = $member && in_array($member->role, ['owner', 'captain', 'manager'], true);
         }
 
-        $isStaff = $tournament->staff()->where('user_id', $actor->id)->exists() || $actor->hasRole('super-admin');
+        $isStaff = $tournament->staff()->where('user_id', $actor->id)->exists() || $actor->hasRole('super_admin');
 
         if (! $isUser && ! $isTeamCaptain && ! $isStaff) {
             throw new AuthorizationException('You are not authorized to check in for this participant.');

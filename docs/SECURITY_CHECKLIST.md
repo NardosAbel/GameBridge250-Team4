@@ -29,7 +29,8 @@ Registered globally in `bootstrap/app.php` via `App\Http\Middleware\SecurityHead
 ## 3. Authentication & RBAC Authorization
 
 - [x] **Multi-Tier RBAC:** Strict authorization matrix enforcing roles:
-  - `student`, `team_captain`, `organizer`, `venue_admin`, `scanner`, `sponsor`, `referee`, `system_admin`.
+  - `player`, `team_captain`, `organizer`, `venue_admin`, `school_admin`, `sponsor`, `creator`, `moderator`, `super_admin`.
+  - Authorization checks use `super_admin`. The names `super-admin` and `admin` are not platform roles.
 - [x] **Policy Enforcement:** All mutation controllers inherit from Laravel Policies:
   - `TournamentPolicy`, `TeamPolicy`, `MatchPolicy`, `TicketPolicy`, `VenuePolicy`, `SponsorshipPolicy`.
 - [x] **Mass Assignment Prevention:** Every Eloquent model strictly defines `$fillable` with whitelisted attributes. `$guarded = []` is strictly forbidden.
@@ -49,11 +50,14 @@ Registered globally in `bootstrap/app.php` via `App\Http\Middleware\SecurityHead
 ## 4. Payment & Gate Verification Security
 
 - [x] **Webhook Signature Verification:**
-  - Telebirr, Chapa, and M-Pesa webhooks verify cryptographic signatures (HMAC-SHA256) before payload parsing.
-  - Unauthenticated requests trigger `HTTP 401 Unauthorized` or `HTTP 403 Forbidden`.
+  - Telebirr, Chapa, M-Pesa, card, and bank transfer stay disabled whenever `PAYMENTS_SANDBOX` is false. A shared HMAC is not those providers' live signature scheme, so a configured merchant id or webhook secret does not enable a live charge or webhook.
+  - With `PAYMENTS_SANDBOX=true`, local and test webhooks use HMAC-SHA256 over the canonical payload. A missing signature, a missing secret, the old bypass string `valid_signature`, an unsupported provider, or an amount, currency, or reference mismatch is rejected with HTTP 400. No tickets are issued.
+  - Sandbox checkout creates a local reference only. It does not move funds.
 - [x] **Idempotency & Replay Attack Protection:**
   - Webhook transactions record unique provider transaction IDs.
-  - Duplicate callbacks are acknowledged idempotently without double-crediting tickets or wallets.
+  - Duplicate callbacks are acknowledged without issuing a second set of tickets.
+  - Reconciling a payment that already issued tickets returns the existing tickets.
+  - Ticket reports and CSV exports require the event organizer, venue manager, tournament organizer, or `super_admin`.
 - [x] **Cryptographically Signed QR Tokens (`QrTokenService`):**
   - QR codes contain only a ticket reference UUID and a HMAC-SHA256 signature:
     ```json

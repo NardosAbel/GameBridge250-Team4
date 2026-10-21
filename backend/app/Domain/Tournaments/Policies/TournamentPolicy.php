@@ -22,7 +22,7 @@ class TournamentPolicy
             return false;
         }
 
-        if ($user->hasRole('super-admin') || $tournament->organizer_id === $user->id) {
+        if ($user->hasRole('super_admin') || $tournament->organizer_id === $user->id) {
             return true;
         }
 
@@ -35,12 +35,12 @@ class TournamentPolicy
 
     public function create(User $user): bool
     {
-        return $user->hasRole(['organizer', 'super-admin']) || $user->can('tournaments.create');
+        return $user->hasRole(['organizer', 'super_admin']) || $user->can('tournaments.create');
     }
 
     public function update(User $user, Tournament $tournament): bool
     {
-        if ($user->hasRole('super-admin') || $tournament->organizer_id === $user->id) {
+        if ($user->hasRole('super_admin') || $tournament->organizer_id === $user->id) {
             return true;
         }
 
@@ -52,7 +52,7 @@ class TournamentPolicy
 
     public function delete(User $user, Tournament $tournament): bool
     {
-        return $user->hasRole('super-admin') || $tournament->organizer_id === $user->id;
+        return $user->hasRole('super_admin') || $tournament->organizer_id === $user->id;
     }
 
     public function generateBracket(User $user, Tournament $tournament): bool
@@ -62,6 +62,6 @@ class TournamentPolicy
 
     public function assignStaff(User $user, Tournament $tournament): bool
     {
-        return $user->hasRole('super-admin') || $tournament->organizer_id === $user->id;
+        return $user->hasRole('super_admin') || $tournament->organizer_id === $user->id;
     }
 }

@@ -3,7 +3,7 @@
 namespace App\Domain\Ticketing\Services;
 
 use App\Domain\Ticketing\Models\Ticket;
-use InvalidArgumentException;
+use RuntimeException;
 
 class QrTokenService
 {
@@ -18,7 +18,7 @@ class QrTokenService
     {
         $secretKey = config('app.key');
         if (empty($secretKey)) {
-            throw new InvalidArgumentException('Application key is not set.');
+            throw new RuntimeException('Application key is not set.');
         }
 
         $signature = hash_hmac('sha256', "ticket:{$ticket->uuid}:{$ticket->id}", $secretKey);

@@ -31,7 +31,7 @@ class CreateVenueAction
                 'pricing_details' => $data['pricing_details'] ?? null,
                 'currency' => $data['currency'] ?? 'ETB',
                 'photos' => $data['photos'] ?? [],
-                'verified' => $owner->hasRole('super-admin'), // Auto-verify if created by admin
+                'verified' => $owner->hasRole('super_admin'), // Auto-verify if created by admin
             ]);
 
             // Assign owner as Manager staff

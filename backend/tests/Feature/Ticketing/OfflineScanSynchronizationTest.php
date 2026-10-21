@@ -135,6 +135,7 @@ test('offline scans batch synchronization reconciles queued entries correctly', 
     // Create second ticket
     $order2 = TicketOrder::create([
         'order_number' => 'ORD-SCAN-5678',
+        'event_id' => $this->event->id,
         'user_id' => User::factory()->create()->id,
         'subtotal' => 100.00,
         'total_amount' => 100.00,
@@ -219,4 +220,17 @@ test('scanner rejects ticket if presented at wrong event', function () {
             'success' => false,
             'status' => 'wrong_event',
         ]);
+});
+
+test('an organizer who is not assigned to the event cannot scan its tickets', function () {
+    $outsider = User::factory()->create();
+    $outsider->assignRole(RoleEnum::ORGANIZER->value);
+
+    $this->actingAs($outsider, 'sanctum')->postJson('/api/v1/tickets/scan', [
+        'qr_payload' => $this->ticket->qr_payload,
+        'event_id' => $this->event->id,
+    ])->assertForbidden();
+
+    $this->ticket->refresh();
+    expect($this->ticket->status)->toBe('active');
 });

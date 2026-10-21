@@ -9,6 +9,7 @@ use App\Http\Requests\Profile\ProfileUpdateRequest;
 use App\Http\Resources\ProfileResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class ProfileController extends ApiController
 {
@@ -46,13 +47,11 @@ class ProfileController extends ApiController
     /**
      * Get public profile by gamer tag.
      */
-    public function getByGamerTag(string $gamerTag): JsonResponse
+    public function getByGamerTag(Request $request, string $gamerTag): JsonResponse
     {
-        $profile = Profile::where('gamer_tag', $gamerTag)
-            ->where('is_public', true)
-            ->first();
+        $profile = Profile::where('gamer_tag', $gamerTag)->first();
 
-        if (! $profile) {
+        if (! $profile || Gate::forUser($request->user())->denies('view', $profile)) {
             return $this->errorResponse('Gamer profile not found or is set to private.', [], 404);
         }
 

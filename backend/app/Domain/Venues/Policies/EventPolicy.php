@@ -19,18 +19,18 @@ class EventPolicy
 
     public function create(User $user): bool
     {
-        return $user->hasRole(['organizer', 'super-admin']) || $user->can('create-tournaments');
+        return $user->hasRole(['organizer', 'super_admin']) || $user->can('create-tournaments');
     }
 
     public function update(User $user, Event $event): bool
     {
         return $event->organizer_id === $user->id
             || ($event->venue && $event->venue->isStaff($user, 'manager'))
-            || $user->hasRole('super-admin');
+            || $user->hasRole('super_admin');
     }
 
     public function delete(User $user, Event $event): bool
     {
-        return $event->organizer_id === $user->id || $user->hasRole('super-admin');
+        return $event->organizer_id === $user->id || $user->hasRole('super_admin');
     }
 }

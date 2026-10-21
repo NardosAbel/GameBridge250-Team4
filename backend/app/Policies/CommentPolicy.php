@@ -18,7 +18,7 @@ class CommentPolicy
             return true;
         }
 
-        if ($user->hasAnyRole(['admin', 'moderator'])) {
+        if ($user->hasAnyRole(['super_admin', 'moderator'])) {
             return true;
         }
 

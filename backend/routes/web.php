@@ -17,7 +17,7 @@ Route::get('/', function () {
 })->name('home');
 
 // Guest Authentication Routes
-Route::middleware('guest')->group(function () {
+Route::middleware(['guest', 'throttle:10,1'])->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
 
@@ -32,9 +32,11 @@ Route::middleware('guest')->group(function () {
 });
 
 // Verification notice & actions
-Route::get('/verify-otp', [AuthController::class, 'showVerifyOtp'])->name('verification.notice');
-Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])->name('verification.verify');
-Route::post('/resend-otp', [AuthController::class, 'resendOtp'])->name('verification.resend');
+Route::middleware('throttle:10,1')->group(function () {
+    Route::get('/verify-otp', [AuthController::class, 'showVerifyOtp'])->name('verification.notice');
+    Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])->name('verification.verify');
+    Route::post('/resend-otp', [AuthController::class, 'resendOtp'])->name('verification.resend');
+});
 
 // Authenticated Routes
 Route::middleware('auth')->group(function () {

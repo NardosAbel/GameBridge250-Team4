@@ -32,13 +32,21 @@ class UpdateTournamentStatusAction
         $currentStatus = $tournament->status;
 
         // Allow super admin to override or transition directly
-        if (! $actor->hasRole('super-admin') && ! in_array($newStatus, $allowedTransitions[$currentStatus] ?? [], true)) {
+        if (! $actor->hasRole('super_admin') && ! in_array($newStatus, $allowedTransitions[$currentStatus] ?? [], true)) {
             throw new InvalidArgumentException("Cannot transition tournament status from '{$currentStatus}' to '{$newStatus}'.");
         }
 
         // Additional checks:
         if ($newStatus === 'live' && $tournament->brackets()->count() === 0) {
             throw new InvalidArgumentException('Cannot start tournament without generating brackets first.');
+        }
+
+        $incompleteFormats = ['double_elimination', 'swiss', 'group_knockout'];
+        if (
+            in_array($tournament->format, $incompleteFormats, true)
+            && in_array($newStatus, ['published', 'registration_open', 'check_in', 'live'], true)
+        ) {
+            throw new InvalidArgumentException('This tournament format cannot be published until its bracket progression is complete. Use single elimination or round robin.');
         }
 
         $old = ['status' => $currentStatus];

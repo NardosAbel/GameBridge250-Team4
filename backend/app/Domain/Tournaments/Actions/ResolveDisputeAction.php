@@ -26,7 +26,7 @@ class ResolveDisputeAction
         $isStaff = $tournament->organizer_id === $actor->id
             || $tournament->staff()->where('user_id', $actor->id)->whereIn('role', ['admin', 'co_organizer', 'referee'])->exists()
             || $match->referee_id === $actor->id
-            || $actor->hasRole('super-admin');
+            || $actor->hasRole('super_admin');
 
         if (! $isStaff) {
             throw new AuthorizationException('Only authorized tournament referees or organizers can resolve disputes.');
@@ -46,6 +46,13 @@ class ResolveDisputeAction
 
             switch ($actionTaken) {
                 case 'confirm_result':
+                    if ($match->status === 'disputed') {
+                        $match->update(['status' => 'pending']);
+                    }
+                    if ($match->latestResult && $match->latestResult->status === 'disputed') {
+                        $match->latestResult->update(['status' => 'submitted']);
+                    }
+                    $match->refresh();
                     if ($match->latestResult) {
                         $this->confirmAction->execute($actor, $match, $match->latestResult);
                     }

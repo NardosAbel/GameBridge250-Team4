@@ -3,9 +3,11 @@
 namespace App\Domain\Notifications\Services;
 
 use App\Domain\Notifications\Models\NotificationPreference;
+use App\Domain\Notifications\Notifications\GenericNotification;
 use App\Models\User;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class NotificationService
 {
@@ -30,18 +32,21 @@ class NotificationService
         }
 
         // 2. Email channel abstraction
-        if ($prefs->email && $user->email) {
-            Log::info("Email notification queued for user {$user->id} ({$user->email}): {$eventType}");
+        if ($prefs->email && $user->email && $notification instanceof GenericNotification) {
+            Mail::raw(
+                $notification->title."\n\n".$notification->message,
+                function ($message) use ($user, $notification): void {
+                    $message->to($user->email)->subject($notification->title);
+                }
+            );
         }
 
-        // 3. SMS channel abstraction (e.g. for urgent match / verification alerts)
         if ($prefs->sms && $user->phone) {
-            Log::info("SMS notification queued for user {$user->id} ({$user->phone}): {$eventType}");
+            Log::info("SMS provider is not configured for user {$user->id} event {$eventType}.");
         }
 
-        // 4. Push channel abstraction (FCM / WebPush)
         if ($prefs->push) {
-            Log::info("Push notification queued for user {$user->id}: {$eventType}");
+            Log::info("Push provider is not configured for user {$user->id} event {$eventType}.");
         }
     }
 }

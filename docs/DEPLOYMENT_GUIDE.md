@@ -22,8 +22,8 @@ This guide details the standard deployment process, server prerequisites, zero-d
 
 Maintain strict isolation across environments:
 1. **Local Development:** `APP_ENV=local`, `APP_DEBUG=true`, SQLite/PostgreSQL, Redis, Mailpit.
-2. **Staging:** `APP_ENV=staging`, `APP_DEBUG=false`, staging databases, sandbox Telebirr / Chapa payment endpoints.
-3. **Production:** `APP_ENV=production`, `APP_DEBUG=false`, read/write PostgreSQL replica cluster, live payment gateways, signed HMAC credentials.
+2. **Staging:** `APP_ENV=staging`, `APP_DEBUG=false`, staging databases. Keep `PAYMENTS_SANDBOX=true` only for local-style checkout stubs; do not treat that HMAC as a real PSP protocol.
+3. **Production:** `APP_ENV=production`, `APP_DEBUG=false`, read/write PostgreSQL replica cluster. Keep `PAYMENTS_SANDBOX=false`. Live Telebirr, Chapa, M-Pesa, card, and bank settlement stay disabled until a provider-specific verifier is implemented.
 
 ---
 
@@ -72,15 +72,20 @@ REVERB_HOST="campusesports.et"
 REVERB_PORT=443
 REVERB_SCHEME=https
 
-# Payment Providers (Production)
-TELEBIRR_APP_ID=PROD_TELEBIRR_APP_ID
-TELEBIRR_APP_KEY=PROD_TELEBIRR_KEY
-TELEBIRR_SHORT_CODE=PROD_SHORTCODE
-TELEBIRR_PUBLIC_KEY=PROD_PUBLIC_KEY
-CHAPA_SECRET_KEY=CHASECK_PROD_SECRET_KEY
-CHAPA_WEBHOOK_SECRET=PROD_WEBHOOK_SECRET
-MPESA_CONSUMER_KEY=PROD_MPESA_KEY
-MPESA_CONSUMER_SECRET=PROD_MPESA_SECRET
+# Payments: fail closed until a real provider verifier exists.
+# Do not set PAYMENTS_SANDBOX=true in production. Merchant IDs and webhook
+# secrets alone do not enable live Telebirr/Chapa/M-Pesa settlement.
+PAYMENTS_SANDBOX=false
+TELEBIRR_APP_ID=
+TELEBIRR_APP_KEY=
+TELEBIRR_SHORT_CODE=
+TELEBIRR_PUBLIC_KEY=
+TELEBIRR_WEBHOOK_SECRET=
+CHAPA_SECRET_KEY=
+CHAPA_WEBHOOK_SECRET=
+MPESA_CONSUMER_KEY=
+MPESA_CONSUMER_SECRET=
+MPESA_WEBHOOK_SECRET=
 ```
 
 ---
@@ -137,6 +142,8 @@ php artisan cee:health-check
 
 echo "Deployment completed successfully!"
 ```
+
+Keep `PAYMENTS_SANDBOX=false` in production. Telebirr, Chapa, M-Pesa, card, and bank transfer do not settle payments until a provider-specific verifier exists. The Docker Compose `app` service sets `PAYMENTS_SANDBOX=true` for local development only; never copy that compose environment into a production host. Run `php artisan schedule:work` (or a system scheduler calling `php artisan schedule:run`) so expired suspensions and mutes are lifted. The release migrations add `users.suspended_until`, `users.muted_until`, `tickets.issuance_slot`, and `tournament_ranking_awards` (with a legacy `settings.ranking_ledger` backfill).
 
 ---
 

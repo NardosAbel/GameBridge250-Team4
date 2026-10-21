@@ -49,7 +49,7 @@ export default function RankingsIndex() {
     const [takingSnapshot, setTakingSnapshot] = useState(false);
     const [snapshotMsg, setSnapshotMsg] = useState<string | null>(null);
 
-    const isAdmin = auth?.user?.roles?.some((r: string) => ['admin', 'super-admin'].includes(r));
+    const isAdmin = auth?.user?.roles?.some((r: string) => ['super_admin'].includes(r));
 
     const fetchGames = async () => {
         try {

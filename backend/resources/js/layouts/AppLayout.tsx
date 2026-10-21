@@ -189,7 +189,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                                     <Bell className="w-4 h-4 text-amber-400" />
                                     Alerts
                                 </Link>
-                                {auth.user.roles.some((r: string) => ['admin', 'moderator'].includes(r)) && (
+                                {auth.user.roles.some((r: string) => ['super_admin', 'moderator'].includes(r)) && (
                                     <Link
                                         href="/moderation/queue"
                                         className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"

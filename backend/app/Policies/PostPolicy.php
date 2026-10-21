@@ -19,7 +19,7 @@ class PostPolicy
             return false;
         }
 
-        if ($user->id === $post->user_id || $user->hasAnyRole(['admin', 'moderator'])) {
+        if ($user->id === $post->user_id || $user->hasAnyRole(['super_admin', 'moderator'])) {
             return true;
         }
 
@@ -47,12 +47,12 @@ class PostPolicy
 
     public function update(User $user, Post $post): bool
     {
-        return $user->id === $post->user_id || $user->hasRole('admin');
+        return $user->id === $post->user_id || $user->hasRole('super_admin');
     }
 
     public function delete(User $user, Post $post): bool
     {
-        if ($user->id === $post->user_id || $user->hasAnyRole(['admin', 'moderator'])) {
+        if ($user->id === $post->user_id || $user->hasAnyRole(['super_admin', 'moderator'])) {
             return true;
         }
 
@@ -77,7 +77,7 @@ class PostPolicy
 
     public function pin(User $user, Post $post): bool
     {
-        if ($user->hasRole('admin')) {
+        if ($user->hasRole('super_admin')) {
             return true;
         }
 

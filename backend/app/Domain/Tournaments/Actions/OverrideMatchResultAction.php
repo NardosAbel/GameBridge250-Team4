@@ -23,7 +23,7 @@ class OverrideMatchResultAction
         $isOrganizer = $tournament->organizer_id === $actor->id
             || $tournament->staff()->where('user_id', $actor->id)->whereIn('role', ['admin', 'co_organizer', 'referee'])->exists()
             || $match->referee_id === $actor->id
-            || $actor->hasRole('super-admin');
+            || $actor->hasRole('super_admin');
 
         if (! $isOrganizer) {
             throw new AuthorizationException('Only tournament organizers, administrators, or referees can override match results.');

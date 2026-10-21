@@ -5,8 +5,6 @@ namespace App\Domain\Ticketing\Services;
 use App\Domain\Ticketing\Models\Ticket;
 use App\Domain\Ticketing\Models\TicketOrder;
 use App\Domain\Ticketing\Models\TicketScan;
-use App\Domain\Venues\Models\Event;
-use Illuminate\Support\Facades\DB;
 
 class TicketReportingService
 {
@@ -31,7 +29,7 @@ class TicketReportingService
         }
 
         // 1. Sales & Revenue
-        $completedOrders = (clone $ordersQuery)->where('status', 'completed')->get();
+        $completedOrders = (clone $ordersQuery)->whereIn('status', ['paid', 'completed'])->get();
         $totalRevenue = (float) $completedOrders->sum('total_amount');
         $totalSubtotal = (float) $completedOrders->sum('subtotal');
         $totalDiscounts = (float) $completedOrders->sum('discount_amount');
@@ -50,7 +48,9 @@ class TicketReportingService
 
         // 4. Ticket Categories Breakdown
         $categoryBreakdown = (clone $ticketsQuery)
-            ->select('ticket_type_id', DB::raw('count(*) as count'), DB::raw('sum(case when status in ("checked_in", "used") then 1 else 0 end) as checked_in'))
+            ->select('ticket_type_id')
+            ->selectRaw('count(*) as count')
+            ->selectRaw("sum(case when status in ('checked_in', 'used') then 1 else 0 end) as checked_in")
             ->groupBy('ticket_type_id')
             ->get()
             ->map(function ($row) {
@@ -65,7 +65,10 @@ class TicketReportingService
 
         // 5. Scanner Performance
         $scannerStats = (clone $scansQuery)
-            ->select('scanner_user_id', DB::raw('count(*) as total_scans'), DB::raw('sum(case when status = "valid" then 1 else 0 end) as valid_scans'), DB::raw('sum(case when status = "duplicate" then 1 else 0 end) as duplicate_scans'))
+            ->select('scanner_user_id')
+            ->selectRaw('count(*) as total_scans')
+            ->selectRaw("sum(case when status = 'valid' then 1 else 0 end) as valid_scans")
+            ->selectRaw("sum(case when status = 'duplicate' then 1 else 0 end) as duplicate_scans")
             ->groupBy('scanner_user_id')
             ->get()
             ->map(function ($row) {

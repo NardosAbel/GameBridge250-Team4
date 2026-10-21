@@ -12,7 +12,7 @@ class CreateCommunityAction
 {
     public function execute(User $user, array $data): Community
     {
-        if ($user->isBanned() || $user->isSuspended()) {
+        if ($user->isBanned() || $user->isSuspended() || $user->isMuted()) {
             throw new InvalidArgumentException('Suspended or banned users cannot create communities.');
         }
 

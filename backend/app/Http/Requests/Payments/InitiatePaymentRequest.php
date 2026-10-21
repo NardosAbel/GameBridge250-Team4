@@ -2,13 +2,25 @@
 
 namespace App\Http\Requests\Payments;
 
+use App\Domain\Identity\Enums\RoleEnum;
+use App\Domain\Ticketing\Models\TicketOrder;
 use Illuminate\Foundation\Http\FormRequest;
 
 class InitiatePaymentRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        $user = $this->user();
+        if ($user === null) {
+            return false;
+        }
+
+        $order = TicketOrder::query()->find($this->input('order_id'));
+        if ($order === null) {
+            return true;
+        }
+
+        return $order->user_id === $user->id || $user->hasRole(RoleEnum::SUPER_ADMIN->value);
     }
 
     public function rules(): array

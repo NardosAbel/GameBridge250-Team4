@@ -2,47 +2,146 @@
 
 namespace App\Domain\Tournaments\Services;
 
+use App\Domain\Identity\Services\AuditLogger;
 use App\Domain\Tournaments\Models\Ranking;
 use App\Domain\Tournaments\Models\RankingSnapshot;
 use App\Domain\Tournaments\Models\Season;
 use App\Domain\Tournaments\Models\Tournament;
+use App\Domain\Tournaments\Models\TournamentRankingAward;
 use Illuminate\Support\Facades\DB;
 
 class RankingCalculationService
 {
     /**
-     * Award tournament placement points to participants in the current season.
+     * Synchronize tournament placement points onto seasonal rankings.
+     *
+     * Re-running is safe: the award ledger stores the last applied points per
+     * ranking, so lowering or clearing points_awarded reverses the previous delta.
      */
     public function awardTournamentPoints(Tournament $tournament): void
     {
-        $currentSeason = Season::where('is_current', true)->first();
-        $isTeam = $tournament->entry_type === 'team' || $tournament->registrations()->whereNotNull('team_id')->exists();
+        DB::transaction(function () use ($tournament): void {
+            $tournament = Tournament::whereKey($tournament->id)->lockForUpdate()->firstOrFail();
+            $currentSeason = Season::where('is_current', true)->first();
+            $isTeam = $tournament->entry_type === 'team' || $tournament->registrations()->whereNotNull('team_id')->exists();
 
-        $registrations = $tournament->registrations()->where('points_awarded', '>', 0)->get();
+            /** @var array<int, int> $desired ranking_id => target points for this tournament */
+            $desired = [];
 
-        foreach ($registrations as $reg) {
-            $points = $reg->points_awarded;
-            $entityId = $isTeam ? $reg->team_id : $reg->user_id;
+            foreach ($tournament->registrations()->get() as $reg) {
+                $points = max(0, (int) $reg->points_awarded);
+                $entityId = $isTeam ? $reg->team_id : $reg->user_id;
 
-            if (! $entityId) {
-                continue;
+                if (! $entityId) {
+                    continue;
+                }
+
+                $ranking = Ranking::query()
+                    ->where('season_id', $currentSeason?->id)
+                    ->where('game_id', $tournament->game_id)
+                    ->where($isTeam ? 'team_id' : 'user_id', $entityId)
+                    ->first();
+
+                if (! $ranking && $points <= 0) {
+                    continue;
+                }
+
+                if (! $ranking) {
+                    $ranking = Ranking::create([
+                        'season_id' => $currentSeason?->id,
+                        'game_id' => $tournament->game_id,
+                        $isTeam ? 'team_id' : 'user_id' => $entityId,
+                        'points' => 0,
+                        'rating' => 1000,
+                    ]);
+                }
+
+                $desired[(int) $ranking->id] = ($desired[(int) $ranking->id] ?? 0) + $points;
             }
 
-            $ranking = Ranking::firstOrCreate([
-                'season_id' => $currentSeason?->id,
-                'game_id' => $tournament->game_id,
-                $isTeam ? 'team_id' : 'user_id' => $entityId,
-            ], [
-                'points' => 0,
-                'rating' => 1000,
-            ]);
+            $awards = TournamentRankingAward::query()
+                ->where('tournament_id', $tournament->id)
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('ranking_id');
 
-            $ranking->increment('points', $points);
-            $ranking->increment('rating', (int) ($points * 1.5));
+            $corrections = [];
+
+            foreach ($awards as $rankingId => $award) {
+                $target = (int) ($desired[(int) $rankingId] ?? 0);
+                $previous = (int) $award->points;
+                $delta = $target - $previous;
+
+                if ($delta !== 0) {
+                    $this->applyDelta((int) $rankingId, $delta);
+                    $corrections[] = [
+                        'ranking_id' => (int) $rankingId,
+                        'from' => $previous,
+                        'to' => $target,
+                    ];
+                }
+
+                if ($target <= 0) {
+                    $award->delete();
+                } else {
+                    $award->update(['points' => $target]);
+                }
+
+                unset($desired[(int) $rankingId]);
+            }
+
+            foreach ($desired as $rankingId => $points) {
+                if ($points <= 0) {
+                    continue;
+                }
+
+                $this->applyDelta((int) $rankingId, $points);
+                TournamentRankingAward::create([
+                    'tournament_id' => $tournament->id,
+                    'ranking_id' => $rankingId,
+                    'points' => $points,
+                ]);
+                $corrections[] = [
+                    'ranking_id' => (int) $rankingId,
+                    'from' => 0,
+                    'to' => $points,
+                ];
+            }
+
+            $settings = $tournament->settings ?? [];
+            $settings['rankings_settled_at'] = now()->toIso8601String();
+            $tournament->update(['settings' => $settings]);
+
+            if ($corrections !== []) {
+                AuditLogger::log(
+                    action: 'tournament.rankings_synced',
+                    user: null,
+                    entityType: 'tournament',
+                    entityId: $tournament->id,
+                    metadata: [
+                        'corrections' => $corrections,
+                    ]
+                );
+            }
+
+            $this->recalculateRanks($tournament->game_id, $currentSeason?->id);
+        });
+    }
+
+    private function applyDelta(int $rankingId, int $delta): void
+    {
+        if ($delta === 0) {
+            return;
         }
 
-        // Recalculate ranks for this game and season
-        $this->recalculateRanks($tournament->game_id, $currentSeason?->id);
+        $ranking = Ranking::whereKey($rankingId)->lockForUpdate()->first();
+        if (! $ranking) {
+            return;
+        }
+
+        $ranking->points = max(0, (int) $ranking->points + $delta);
+        $ranking->rating = max(0, (int) $ranking->rating + (int) round($delta * 1.5));
+        $ranking->save();
     }
 
     /**

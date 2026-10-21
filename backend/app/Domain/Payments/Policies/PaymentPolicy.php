@@ -11,6 +11,6 @@ class PaymentPolicy
     {
         return $payment->user_id === $user->id
             || ($payment->order && $payment->order->event && $payment->order->event->organizer_id === $user->id)
-            || $user->hasRole('super-admin');
+            || $user->hasRole('super_admin');
     }
 }

@@ -204,6 +204,38 @@ class BracketGenerationService
             'node_order' => 1,
         ]);
 
+        // Upper-bracket losers drop into a lower bracket before the lower final.
+        $upperRounds = $bracket->nodes()->where('round', '<', $upperFinalNode->round)->get()->groupBy('round');
+        foreach ($upperRounds as $round => $nodes) {
+            $ordered = $nodes->sortBy('node_order')->values();
+            for ($i = 0; $i < $ordered->count(); $i += 2) {
+                $lowerNode = BracketNode::create([
+                    'bracket_id' => $bracket->id,
+                    'round' => 50 + (int) $round,
+                    'node_order' => (int) ($i / 2) + 1,
+                    'next_node_id' => $lowerFinalNode->id,
+                ]);
+                $ordered[$i]->update(['loser_next_node_id' => $lowerNode->id]);
+                if (isset($ordered[$i + 1])) {
+                    $ordered[$i + 1]->update(['loser_next_node_id' => $lowerNode->id]);
+                }
+                TournamentMatch::create([
+                    'tournament_id' => $tournament->id,
+                    'bracket_node_id' => $lowerNode->id,
+                    'match_format' => $tournament->match_format ?? 'bo3',
+                    'round' => 50 + (int) $round,
+                    'match_number' => (int) ($i / 2) + 1,
+                    'participant1_type' => $participantType,
+                    'participant2_type' => $participantType,
+                    'status' => 'pending',
+                ]);
+            }
+        }
+
+        // Odd node order fills grand-final slot 1 (upper winner). Even fills slot 2 (lower winner).
+        $lowerFinalNode->node_order = 2;
+        $lowerFinalNode->save();
+
         // Link upper final to grand final
         $upperFinalNode->update(['next_node_id' => $grandFinalNode->id, 'loser_next_node_id' => $lowerFinalNode->id]);
         $lowerFinalNode->update(['next_node_id' => $grandFinalNode->id]);

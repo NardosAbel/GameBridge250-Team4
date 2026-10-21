@@ -37,6 +37,8 @@ class User extends Authenticatable
         'password',
         'locale',
         'status',
+        'suspended_until',
+        'muted_until',
         'is_minor',
         'two_factor_enabled',
         'email_verified_at',
@@ -66,6 +68,8 @@ class User extends Authenticatable
             'is_minor' => 'boolean',
             'two_factor_enabled' => 'boolean',
             'status' => UserStatusEnum::class,
+            'suspended_until' => 'datetime',
+            'muted_until' => 'datetime',
         ];
     }
 
@@ -127,6 +131,11 @@ class User extends Authenticatable
     public function isSuspended(): bool
     {
         return $this->status === UserStatusEnum::SUSPENDED;
+    }
+
+    public function isMuted(): bool
+    {
+        return $this->muted_until !== null && $this->muted_until->isFuture();
     }
 
     public function brandProfiles(): HasMany

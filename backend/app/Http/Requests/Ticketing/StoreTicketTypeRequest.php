@@ -2,13 +2,31 @@
 
 namespace App\Http\Requests\Ticketing;
 
+use App\Domain\Identity\Enums\RoleEnum;
+use App\Domain\Tournaments\Models\Tournament;
+use App\Domain\Venues\Models\Event;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreTicketTypeRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        $user = $this->user();
+        if ($user === null) {
+            return false;
+        }
+
+        if ($user->hasRole(RoleEnum::SUPER_ADMIN->value)) {
+            return true;
+        }
+
+        $event = Event::query()->find($this->input('event_id'));
+        $tournament = Tournament::query()->find($this->input('tournament_id'));
+
+        $ownsEvent = $event !== null && $event->organizer_id === $user->id;
+        $ownsTournament = $tournament !== null && $tournament->organizer_id === $user->id;
+
+        return $ownsEvent || $ownsTournament;
     }
 
     public function rules(): array

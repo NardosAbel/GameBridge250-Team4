@@ -9,11 +9,11 @@ class ProfilePolicy
 {
     public function view(?User $user, Profile $profile): bool
     {
-        return true;
+        return $profile->isVisibleTo($user);
     }
 
     public function update(User $user, Profile $profile): bool
     {
-        return $user->id === $profile->user_id || $user->hasRole('admin');
+        return $user->id === $profile->user_id || $user->hasRole('super_admin');
     }
 }

@@ -1,8 +1,10 @@
 <?php
 
 use App\Domain\Profiles\Models\Profile;
+use App\Domain\Social\Models\Follow;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
+use Illuminate\Support\Facades\Gate;
 
 beforeEach(function () {
     $this->seed(RoleSeeder::class);
@@ -68,4 +70,111 @@ test('private profile cannot be accessed publicly', function () {
     $response = $this->getJson('/api/v1/profiles/public/PrivateSniper');
 
     $response->assertStatus(404);
+});
+
+test('a public profile hides the school id number from other users', function () {
+    $owner = User::factory()->create();
+    Profile::create([
+        'user_id' => $owner->id,
+        'gamer_tag' => 'CampusAce',
+        'school_id_number' => 'UGR/1111/14',
+        'is_public' => true,
+        'privacy_settings' => ['visibility' => 'public'],
+    ]);
+
+    $stranger = User::factory()->create();
+
+    $this->actingAs($stranger, 'sanctum')
+        ->getJson('/api/v1/profiles/public/CampusAce')
+        ->assertOk()
+        ->assertJsonPath('data.school_id_number', null);
+});
+
+test('a followers-only profile is hidden from users who do not follow the player', function () {
+    $owner = User::factory()->create();
+    Profile::create([
+        'user_id' => $owner->id,
+        'gamer_tag' => 'FollowOnly',
+        'is_public' => true,
+        'privacy_settings' => ['visibility' => 'followers'],
+    ]);
+
+    $this->getJson('/api/v1/profiles/public/FollowOnly')->assertNotFound();
+});
+
+test('a followers-only profile is visible to an authenticated follower', function () {
+    $owner = User::factory()->create();
+    Profile::create([
+        'user_id' => $owner->id,
+        'gamer_tag' => 'FollowVisible',
+        'is_public' => true,
+        'privacy_settings' => ['visibility' => 'followers'],
+    ]);
+
+    $follower = User::factory()->create();
+    Follow::create([
+        'follower_id' => $follower->id,
+        'followable_type' => $owner->getMorphClass(),
+        'followable_id' => $owner->id,
+    ]);
+
+    $this->actingAs($follower, 'sanctum')
+        ->getJson('/api/v1/profiles/public/FollowVisible')
+        ->assertOk()
+        ->assertJsonPath('data.gamer_tag', 'FollowVisible');
+});
+
+test('an owner can view their own private profile by gamer tag', function () {
+    $owner = User::factory()->create();
+    Profile::create([
+        'user_id' => $owner->id,
+        'gamer_tag' => 'OwnerOnly',
+        'is_public' => false,
+        'privacy_settings' => ['visibility' => 'private'],
+    ]);
+
+    $this->actingAs($owner, 'sanctum')
+        ->getJson('/api/v1/profiles/public/OwnerOnly')
+        ->assertOk()
+        ->assertJsonPath('data.gamer_tag', 'OwnerOnly');
+});
+
+test('profile policy view matches public followers private and owner rules', function () {
+    $owner = User::factory()->create();
+    $public = Profile::create([
+        'user_id' => $owner->id,
+        'gamer_tag' => 'PolicyPublic',
+        'is_public' => true,
+        'privacy_settings' => ['visibility' => 'public'],
+    ]);
+
+    $privateOwner = User::factory()->create();
+    $private = Profile::create([
+        'user_id' => $privateOwner->id,
+        'gamer_tag' => 'PolicyPrivate',
+        'is_public' => false,
+        'privacy_settings' => ['visibility' => 'private'],
+    ]);
+
+    $followersOwner = User::factory()->create();
+    $followers = Profile::create([
+        'user_id' => $followersOwner->id,
+        'gamer_tag' => 'PolicyFollowers',
+        'is_public' => true,
+        'privacy_settings' => ['visibility' => 'followers'],
+    ]);
+
+    $stranger = User::factory()->create();
+    $follower = User::factory()->create();
+    Follow::create([
+        'follower_id' => $follower->id,
+        'followable_type' => $followersOwner->getMorphClass(),
+        'followable_id' => $followersOwner->id,
+    ]);
+
+    expect(Gate::forUser(null)->allows('view', $public))->toBeTrue()
+        ->and(Gate::forUser($stranger)->denies('view', $private))->toBeTrue()
+        ->and(Gate::forUser($privateOwner)->allows('view', $private))->toBeTrue()
+        ->and(Gate::forUser($stranger)->denies('view', $followers))->toBeTrue()
+        ->and(Gate::forUser($follower)->allows('view', $followers))->toBeTrue();
 });

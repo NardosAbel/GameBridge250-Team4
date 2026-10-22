@@ -14,6 +14,10 @@ class TournamentPolicy
 
     public function view(?User $user, Tournament $tournament): bool
     {
+        if (in_array($tournament->status, ['draft', 'archived'], true)) {
+            return $this->managesTournament($user, $tournament);
+        }
+
         if ($tournament->visibility === 'public') {
             return true;
         }
@@ -22,15 +26,21 @@ class TournamentPolicy
             return false;
         }
 
+        return $this->managesTournament($user, $tournament)
+            || $tournament->registrations()->where('user_id', $user->id)->exists();
+    }
+
+    private function managesTournament(?User $user, Tournament $tournament): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
         if ($user->hasRole('super_admin') || $tournament->organizer_id === $user->id) {
             return true;
         }
 
-        if ($tournament->staff()->where('user_id', $user->id)->exists()) {
-            return true;
-        }
-
-        return $tournament->registrations()->where('user_id', $user->id)->exists();
+        return $tournament->staff()->where('user_id', $user->id)->exists();
     }
 
     public function create(User $user): bool

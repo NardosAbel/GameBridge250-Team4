@@ -13,6 +13,8 @@
 - Public passport uses `Profile::isVisibleTo()` and returns 404 when the viewer may not see the profile.
 - The profile page no longer labels an unverified email or phone as verified.
 - The dashboard no longer renders competitions that are not in the database.
+- Public tournament listing and detail now hide `draft` and `archived` events, and private events, unless the viewer organizes, staffs, or is registered for that event.
+- `TournamentController` and `DisputeController` called `authorize()` on a base controller that does not provide it. Those calls now use `Gate`, so delete, status changes, and dispute detail no longer crash before the policy runs.
 
 ## Residual risk
 

@@ -34,7 +34,7 @@ Local commit `b769354` on `security/p0-p1-remediation`. Not pushed. `docker/Dock
 
 `php vendor/bin/pint --dirty` passed after the refund change.
 
-A full PostgreSQL Pest run was started in Docker after the passport commit and before this visibility change finished. Its result is recorded when that process exits. It is not evidence for the visibility change.
+A PostgreSQL Pest run in Docker finished with exit code 0: **173 warnings, 750 assertions, no failures** (about 18 minutes). The warnings are `file_get_contents(.env)` because the container has no `.env`. That run started before the visibility, refund, and landing commits, and it loaded test files as it went, so it is not a clean proof of the final tree. The focused SQLite tests above cover those commits. `docker/Dockerfile.pest` remains untracked. Nothing was pushed.
 
 ## Next
 

@@ -10,6 +10,7 @@
 - Tournament and dispute authorization uses `Gate` because the base controller has no `authorize()` method.
 - Leaderboard rows for players link to `/players/{gamer_tag}` and the page no longer claims a national 2026 season.
 - Refund approval leaves tickets unchanged when the provider does not confirm the refund.
+- The public landing page counts profiles, teams, open competitions, listed campuses, and saved games. Sample totals and the tournament form's 5000 ETB prize default are gone.
 
 ## Tests actually run
 
@@ -29,7 +30,7 @@ Local commit `b769354` on `security/p0-p1-remediation`. Not pushed. `docker/Dock
 
 `php vendor/bin/pest tests/Feature/Payments/RefundAndTicketRevocationTest.php` — **4 passed, 21 assertions** (SQLite).
 
-`npx tsc --noEmit` exited 0 after the rankings page change.
+`php vendor/bin/pest tests/Feature/Web/LandingStatsTest.php tests/Feature/ExampleTest.php` — **2 passed, 19 assertions** (SQLite). `ExampleTest` now migrates the test database because the home page reads live counts.
 
 `php vendor/bin/pint --dirty` passed after the refund change.
 

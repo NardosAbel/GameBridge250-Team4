@@ -76,7 +76,7 @@ export default function TournamentIndex() {
         event_type: 'online',
         entry_type: 'free',
         entry_fee: '0',
-        prize_pool: '5000',
+        prize_pool: '0',
         capacity: '16',
         rules: '1. Standard competitive rules apply.\n2. Respect all participants.\n3. Matches must be started within 15 minutes of scheduled time.',
         starts_at: new Date(Date.now() + 86400000 * 3).toISOString().slice(0, 16),

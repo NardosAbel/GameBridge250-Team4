@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\HomeController;
 use App\Http\Controllers\Web\PlayerPassportController;
 use App\Http\Controllers\Web\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -14,9 +15,7 @@ use Inertia\Inertia;
 */
 
 // Public Landing Page
-Route::get('/', function () {
-    return Inertia::render('Landing');
-})->name('home');
+Route::get('/', HomeController::class)->name('home');
 
 Route::get('/players/{handle}', [PlayerPassportController::class, 'show'])->name('players.passport');
 

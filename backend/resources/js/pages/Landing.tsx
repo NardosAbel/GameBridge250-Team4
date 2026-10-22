@@ -34,18 +34,12 @@ interface LandingProps {
 
 export default function Landing({
     stats = {
-        totalPlayers: 1420,
-        totalTeams: 88,
-        activeTournaments: 6,
-        partnerUniversities: 12,
+        totalPlayers: 0,
+        totalTeams: 0,
+        activeTournaments: 0,
+        partnerUniversities: 0,
     },
-    games = [
-        { name: 'EA Sports FC 25', category: 'Sports', publisher: 'EA Sports' },
-        { name: 'PUBG Mobile', category: 'Battle Royale', publisher: 'Krafton' },
-        { name: 'Valorant', category: 'Tactical FPS', publisher: 'Riot Games' },
-        { name: 'Mobile Legends: Bang Bang', category: 'MOBA', publisher: 'Moonton' },
-        { name: 'Tekken 8', category: 'Fighting', publisher: 'Bandai Namco' },
-    ],
+    games = [],
 }: LandingProps) {
     const { t } = useTranslation();
 
@@ -90,7 +84,7 @@ export default function Landing({
                     <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
                         <Card className="p-4 bg-slate-900/60 text-center border-slate-800">
                             <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400">
-                                {stats.totalPlayers}+
+                                {stats.totalPlayers}
                             </div>
                             <div className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">
                                 Registered Gamers
@@ -109,7 +103,7 @@ export default function Landing({
                                 {stats.activeTournaments}
                             </div>
                             <div className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">
-                                Live Tournaments
+                                Open competitions
                             </div>
                         </Card>
                         <Card className="p-4 bg-slate-900/60 text-center border-slate-800">
@@ -117,7 +111,7 @@ export default function Landing({
                                 {stats.partnerUniversities}
                             </div>
                             <div className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">
-                                Universities
+                                Campuses listed
                             </div>
                         </Card>
                     </div>
@@ -177,7 +171,7 @@ export default function Landing({
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-10">
                         <div>
                             <h2 className="text-2xl font-bold text-white">Supported Competitive Titles</h2>
-                            <p className="text-sm text-slate-400">Official tournament titles currently active on the platform</p>
+                            <p className="text-sm text-slate-400">Games saved on the platform</p>
                         </div>
                         <Link href="/tournaments">
                             <Button variant="ghost" size="sm" rightIcon={<ArrowRight className="w-4 h-4" />}>
@@ -186,6 +180,9 @@ export default function Landing({
                         </Link>
                     </div>
 
+                    {games.length === 0 ? (
+                        <p className="text-sm text-slate-400">No games have been added yet.</p>
+                    ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                         {games.map((game, idx) => (
                             <Card key={idx} hover className="p-4 text-center">
@@ -197,6 +194,7 @@ export default function Landing({
                             </Card>
                         ))}
                     </div>
+                    )}
                 </div>
             </section>
 

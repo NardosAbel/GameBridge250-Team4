@@ -34,32 +34,18 @@ interface DashboardProps {
         };
     };
     recentTournaments?: Array<{
+        id: number;
         title: string;
         game: string;
         format: string;
         status: string;
-        date: string;
+        date: string | null;
     }>;
 }
 
 export default function Dashboard({
     auth,
-    recentTournaments = [
-        {
-            title: 'Inter-University FC 25 Qualifier',
-            game: 'EA Sports FC 25',
-            format: 'Single Elimination (BO3)',
-            status: 'Registration Open',
-            date: 'Starting Next Saturday',
-        },
-        {
-            title: 'Addis Ababa PUBG Mobile Campus Showdown',
-            game: 'PUBG Mobile',
-            format: 'Battle Royale Squads',
-            status: 'Registration Open',
-            date: 'Starting Nov 1st',
-        },
-    ],
+    recentTournaments = [],
 }: DashboardProps) {
     const { t } = useTranslation();
     const user = auth.user;
@@ -164,7 +150,7 @@ export default function Dashboard({
                                 Complete game dev courses and cyber-hygiene certificates.
                             </p>
                         </div>
-                        <Link href="/learning" className="mt-4 text-xs font-semibold text-emerald-400 hover:underline flex items-center gap-1">
+                        <Link href="/education" className="mt-4 text-xs font-semibold text-emerald-400 hover:underline flex items-center gap-1">
                             Start Course <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                     </Card>
@@ -185,8 +171,15 @@ export default function Dashboard({
                     </div>
 
                     <div className="space-y-3">
-                        {recentTournaments.map((tourney, idx) => (
-                            <Card key={idx} hover className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        {recentTournaments.length === 0 ? (
+                            <Card className="p-6 text-sm text-slate-300">
+                                No published tournaments are open yet.
+                                <Link href="/tournaments" className="ml-2 font-semibold text-emerald-400 hover:underline">
+                                    Open the tournament list
+                                </Link>
+                            </Card>
+                        ) : recentTournaments.map((tourney) => (
+                            <Card key={tourney.id} hover className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                 <div className="flex items-start gap-3.5">
                                     <div className="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
                                         <Gamepad2 className="w-5 h-5" />
@@ -196,20 +189,26 @@ export default function Dashboard({
                                         <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-400">
                                             <span>{tourney.game}</span>
                                             <span>•</span>
-                                            <span>{tourney.format}</span>
-                                            <span>•</span>
-                                            <span className="text-emerald-400">{tourney.date}</span>
+                                            <span className="capitalize">{tourney.format}</span>
+                                            {tourney.date && (
+                                                <>
+                                                    <span>•</span>
+                                                    <span className="text-emerald-400">{tourney.date}</span>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                                    <Badge variant="success" size="sm">
+                                    <Badge variant="success" size="sm" className="capitalize">
                                         {tourney.status}
                                     </Badge>
-                                    <Button size="sm" variant="outline">
-                                        Details
-                                    </Button>
+                                    <Link href={`/tournaments/${tourney.id}`}>
+                                        <Button size="sm" variant="outline">
+                                            Details
+                                        </Button>
+                                    </Link>
                                 </div>
                             </Card>
                         ))}

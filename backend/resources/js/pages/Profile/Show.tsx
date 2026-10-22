@@ -25,6 +25,21 @@ interface ProfileProps {
         phone?: string;
         locale: string;
         roles: string[];
+        email_verified: boolean;
+        phone_verified: boolean;
+    };
+    passport: {
+        tournament_count: number;
+        verified_result_count: number;
+        rating: number | null;
+        rankings: Array<{ game: string; points: number; rank: number | null }>;
+        results: Array<{
+            tournament_id: number;
+            title: string;
+            status: string;
+            placement: number | null;
+            points_awarded: number | null;
+        }>;
     };
     profile: {
         id: number;
@@ -41,7 +56,7 @@ interface ProfileProps {
     };
 }
 
-export default function Show({ user, profile }: ProfileProps) {
+export default function Show({ user, profile, passport }: ProfileProps) {
     const { t } = useTranslation();
 
     const { data, setData, put, processing, errors, recentlySuccessful } = useForm({
@@ -201,18 +216,18 @@ export default function Show({ user, profile }: ProfileProps) {
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between text-xs py-2 border-b border-slate-800">
                                     <span className="text-slate-400">Email Verification</span>
-                                    {user.email ? (
+                                    {user.email_verified ? (
                                         <span className="text-emerald-400 font-bold">Verified</span>
                                     ) : (
-                                        <span className="text-amber-400">Not provided</span>
+                                        <span className="text-amber-400">{user.email ? 'Not verified' : 'Not provided'}</span>
                                     )}
                                 </div>
                                 <div className="flex items-center justify-between text-xs py-2 border-b border-slate-800">
                                     <span className="text-slate-400">Phone Verification</span>
-                                    {user.phone ? (
+                                    {user.phone_verified ? (
                                         <span className="text-emerald-400 font-bold">Verified</span>
                                     ) : (
-                                        <span className="text-amber-400">Not provided</span>
+                                        <span className="text-amber-400">{user.phone ? 'Not verified' : 'Not provided'}</span>
                                     )}
                                 </div>
                                 <div className="flex items-center justify-between text-xs py-2">
@@ -232,14 +247,42 @@ export default function Show({ user, profile }: ProfileProps) {
                             </h3>
                             <div className="grid grid-cols-2 gap-3 text-center">
                                 <div className="p-3 bg-slate-900 rounded-lg border border-slate-800">
-                                    <div className="text-xl font-bold text-emerald-400">0</div>
+                                    <div className="text-xl font-bold text-emerald-400">{passport.tournament_count}</div>
                                     <div className="text-[10px] text-slate-400 uppercase mt-0.5">Tournaments</div>
                                 </div>
                                 <div className="p-3 bg-slate-900 rounded-lg border border-slate-800">
-                                    <div className="text-xl font-bold text-amber-400">1000</div>
+                                    <div className="text-xl font-bold text-amber-400">{passport.rating ?? '—'}</div>
                                     <div className="text-[10px] text-slate-400 uppercase mt-0.5">Rating</div>
                                 </div>
                             </div>
+                            <p className="mt-3 text-[11px] text-slate-500">
+                                {passport.verified_result_count} verified placement{passport.verified_result_count === 1 ? '' : 's'}. Pending registrations are not counted as results.
+                            </p>
+                            {profile?.is_public && (
+                                <a href={`/players/${encodeURIComponent(profile.gamer_tag)}`} className="mt-3 inline-block text-xs font-semibold text-emerald-400 hover:underline">
+                                    Public player passport
+                                </a>
+                            )}
+                        </Card>
+
+                        <Card className="p-6">
+                            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider mb-3">
+                                Competition record
+                            </h3>
+                            {passport.results.length === 0 ? (
+                                <p className="text-xs text-slate-400">No approved tournament registrations yet.</p>
+                            ) : (
+                                <ul className="space-y-2">
+                                    {passport.results.map((result) => (
+                                        <li key={result.tournament_id} className="flex items-center justify-between gap-3 text-xs border-b border-slate-800 py-2">
+                                            <span className="text-slate-200">{result.title}</span>
+                                            <span className="text-slate-400 shrink-0">
+                                                {result.placement ? `Place ${result.placement}` : 'Result pending'}
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
                         </Card>
                     </div>
                 </div>

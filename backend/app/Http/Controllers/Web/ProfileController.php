@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Domain\Profiles\Actions\UpdateProfileAction;
+use App\Domain\Profiles\Services\PlayerPassportService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Profile\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
@@ -13,7 +14,8 @@ use Inertia\Response;
 class ProfileController extends Controller
 {
     public function __construct(
-        protected UpdateProfileAction $updateProfileAction
+        protected UpdateProfileAction $updateProfileAction,
+        protected PlayerPassportService $playerPassport
     ) {}
 
     public function show(Request $request): Response
@@ -36,7 +38,10 @@ class ProfileController extends Controller
                 'phone' => $user->phone,
                 'locale' => $user->locale,
                 'roles' => $user->roles->pluck('name'),
+                'email_verified' => $user->email_verified_at !== null,
+                'phone_verified' => $user->phone_verified_at !== null,
             ],
+            'passport' => $this->playerPassport->forUser($user),
             'profile' => [
                 'id' => $profile->id,
                 'gamer_tag' => $profile->gamer_tag,

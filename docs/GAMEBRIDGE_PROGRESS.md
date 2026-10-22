@@ -8,6 +8,8 @@
 - Learning shortcut points at `/education`.
 - Public tournament discovery hides drafts, archived events, and private events from people who are not the organizer, staff, or a registrant.
 - Tournament and dispute authorization uses `Gate` because the base controller has no `authorize()` method.
+- Leaderboard rows for players link to `/players/{gamer_tag}` and the page no longer claims a national 2026 season.
+- Refund approval leaves tickets unchanged when the provider does not confirm the refund.
 
 ## Tests actually run
 
@@ -25,7 +27,11 @@ Local commit `b769354` on `security/p0-p1-remediation`. Not pushed. `docker/Dock
 
 `php vendor/bin/pest tests/Feature/Tournaments/TournamentVisibilityTest.php` — **4 passed, 15 assertions** (SQLite).
 
-`php vendor/bin/pint --dirty` fixed `TournamentController` import order.
+`php vendor/bin/pest tests/Feature/Payments/RefundAndTicketRevocationTest.php` — **4 passed, 21 assertions** (SQLite).
+
+`npx tsc --noEmit` exited 0 after the rankings page change.
+
+`php vendor/bin/pint --dirty` passed after the refund change.
 
 A full PostgreSQL Pest run was started in Docker after the passport commit and before this visibility change finished. Its result is recorded when that process exits. It is not evidence for the visibility change.
 

@@ -123,6 +123,30 @@ test('attendee can submit refund request and organizer approval revokes ticket',
     expect($this->order->status)->toBe('refunded');
 });
 
+test('approval does not revoke tickets when the provider refuses the refund', function () {
+    $this->actingAs($this->buyer, 'sanctum')->postJson("/api/v1/payments/orders/{$this->order->id}/refund", [
+        'amount' => 200.00,
+        'reason' => 'Provider settlement must be confirmed first.',
+        'reason_category' => 'attendee_unavailable',
+    ])->assertCreated();
+
+    $refund = Refund::where('ticket_order_id', $this->order->id)->first();
+    $ticketStatus = $this->ticket->status;
+
+    config(['services.payments.sandbox' => false]);
+
+    $this->actingAs($this->organizer, 'sanctum')
+        ->postJson("/api/v1/payments/refunds/{$refund->id}/process", [
+            'approve' => true,
+        ])
+        ->assertStatus(422)
+        ->assertJsonPath('success', false);
+
+    expect($refund->fresh()->status)->toBe('pending')
+        ->and($this->ticket->fresh()->status)->toBe($ticketStatus)
+        ->and($this->order->fresh()->status)->toBe('paid');
+});
+
 test('gate scanner rejects revoked ticket with 422 status', function () {
     $this->ticket->update(['status' => 'revoked']);
 

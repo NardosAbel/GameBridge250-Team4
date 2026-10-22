@@ -15,6 +15,7 @@
 - The dashboard no longer renders competitions that are not in the database.
 - Public tournament listing and detail now hide `draft` and `archived` events, and private events, unless the viewer organizes, staffs, or is registered for that event.
 - `TournamentController` and `DisputeController` called `authorize()` on a base controller that does not provide it. Those calls now use `Gate`, so delete, status changes, and dispute detail no longer crash before the policy runs.
+- An approved refund no longer revokes tickets when the payment provider returns `success: false`. The refund stays pending and the database transaction rolls back.
 
 ## Residual risk
 

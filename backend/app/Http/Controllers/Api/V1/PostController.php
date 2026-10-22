@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api\v1;
+namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Social\Actions\CreatePostAction;
 use App\Domain\Social\Actions\VotePollAction;

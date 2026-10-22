@@ -25,7 +25,7 @@ beforeEach(function () {
         'city' => 'Mekelle',
         'address' => 'Castle Area',
         'capacity' => 80,
-        'is_verified' => true,
+        'verified' => true,
     ]);
 
     $this->event = Event::create([

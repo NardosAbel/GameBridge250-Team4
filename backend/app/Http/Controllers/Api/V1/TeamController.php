@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api\v1;
+namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Teams\Actions\CreateTeamAction;
 use App\Domain\Teams\Actions\InviteOrRequestTeamAction;

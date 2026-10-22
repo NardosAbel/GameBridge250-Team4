@@ -11,6 +11,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class TicketScanService
 {
@@ -48,6 +49,26 @@ class TicketScanService
         $ticketUuid = $payload['ref'];
         $signature = $payload['sig'];
 
+        // PostgreSQL uuid columns reject non-UUID literals (SQLSTATE 22P02).
+        // Treat malformed refs as invalid tickets instead of aborting the request.
+        if (! is_string($ticketUuid) || ! Str::isUuid($ticketUuid)) {
+            return [
+                'success' => false,
+                'status' => 'invalid',
+                'reason' => 'Ticket reference not found in system.',
+                'ticket' => null,
+            ];
+        }
+
+        if (! is_string($signature) || $signature === '') {
+            return [
+                'success' => false,
+                'status' => 'invalid',
+                'reason' => 'Invalid QR code format.',
+                'ticket' => null,
+            ];
+        }
+
         return DB::transaction(function () use ($scanner, $ticketUuid, $signature, $venueId, $eventId, $deviceId, $scannedAtTime) {
             $ticket = Ticket::where('uuid', $ticketUuid)
                 ->with(['ticketType', 'event', 'tournament', 'user'])
@@ -75,11 +96,14 @@ class TicketScanService
                 ];
             }
 
-            if (! $ticket->event_id && ! $scanner->hasRole('super_admin')) {
-                throw new AuthorizationException('This ticket is not assigned to an event.');
-            }
-
-            if ($ticket->event_id) {
+            // Tickets must be event-scoped. Only super_admin may scan a ticket that
+            // has no event_id (break-glass). authorizeScanner also allows super_admin
+            // early when an event_id is present.
+            if (! $ticket->event_id) {
+                if (! $scanner->hasRole('super_admin')) {
+                    throw new AuthorizationException('This ticket is not assigned to an event.');
+                }
+            } else {
                 $this->authorizeScanner($scanner, null, (int) $ticket->event_id);
             }
 

@@ -28,7 +28,7 @@ beforeEach(function () {
         'city' => 'Addis Ababa',
         'address' => 'Airport Road',
         'capacity' => 100,
-        'is_verified' => true,
+        'verified' => true,
     ]);
 
     // Assign scanner staff permissions

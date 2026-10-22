@@ -5,6 +5,7 @@ namespace App\Domain\Identity\Actions;
 use App\Domain\Identity\Models\Otp;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Request;
 
@@ -34,13 +35,25 @@ class SendOtpAction
             'ip_address' => Request::ip(),
         ]);
 
-        if (filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+        // Email OTP codes are the supported delivery channel. The code is short-lived
+        // (10 minutes), single-use, and rate-limited. A signed magic-link alternative
+        // is a separate product change; do not put the OTP in verification URLs.
+        $channel = filter_var($recipient, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
+        if ($channel === 'email') {
             Mail::raw(
                 "Your Campus Esports Ethiopia verification code is {$plainOtp}. It expires in 10 minutes.",
                 function ($message) use ($recipient): void {
                     $message->to($recipient)->subject('Your verification code');
                 }
             );
+        } else {
+            // OTP row is stored either way. No SMS provider is wired yet — do not
+            // invent delivery. Local/testing still return the code in the response.
+            Log::info('SMS OTP provider is not configured; verification code was stored but not delivered.', [
+                'otp_id' => $otp->uuid,
+                'type' => $type,
+                'channel' => 'phone',
+            ]);
         }
 
         return [
@@ -48,6 +61,7 @@ class SendOtpAction
             'recipient' => $recipient,
             'type' => $type,
             'expires_in_seconds' => 600,
+            'delivery' => $channel === 'email' ? 'email' : 'pending_sms_provider',
             // Exposed only in local and testing environments
             'code' => app()->environment(['local', 'testing']) ? $plainOtp : null,
         ];

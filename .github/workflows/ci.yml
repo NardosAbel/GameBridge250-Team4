@@ -57,11 +57,32 @@ jobs:
       - name: Install Composer Dependencies
         run: composer install --prefer-dist --no-progress --no-interaction
 
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Build Frontend Assets for Inertia Tests
+        run: npm run build
+
       - name: Run Laravel Pint (Code Style)
         run: vendor/bin/pint --test
 
       - name: Run Pest Test Suite
         env:
+          APP_KEY: base64:YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=
+          PAYMENTS_SANDBOX: 'true'
+          TELEBIRR_WEBHOOK_SECRET: test-telebirr-webhook-secret
+          CHAPA_WEBHOOK_SECRET: test-chapa-webhook-secret
+          MPESA_WEBHOOK_SECRET: test-mpesa-webhook-secret
+          CARD_WEBHOOK_SECRET: test-card-webhook-secret
+          BANK_TRANSFER_WEBHOOK_SECRET: test-bank-webhook-secret
+          MANUAL_PAYMENT_WEBHOOK_SECRET: test-manual-webhook-secret
           DB_CONNECTION: pgsql
           DB_HOST: 127.0.0.1
           DB_PORT: 5432

@@ -8,7 +8,6 @@ use App\Domain\Tournaments\Models\TournamentRankingAward;
 use App\Domain\Tournaments\Support\RankingLedgerBackfill;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
@@ -83,35 +82,7 @@ test('malformed empty and orphan ranking_ledger entries are skipped', function (
         'rank' => 1,
     ]);
 
-    $malformed = Tournament::create([
-        'organizer_id' => $this->organizer->id,
-        'game_id' => $this->game->id,
-        'title' => 'Malformed',
-        'slug' => 'malformed-ledger',
-        'format' => 'single_elimination',
-        'status' => 'completed',
-        'capacity' => 4,
-        'starts_at' => now()->subDay(),
-        'settings' => [],
-    ]);
-    // Force invalid JSON at the DB layer (Eloquent cast would reject it).
-    DB::table('tournaments')->where('id', $malformed->id)->update([
-        'settings' => '{not-valid-json',
-    ]);
-
-    Tournament::create([
-        'organizer_id' => $this->organizer->id,
-        'game_id' => $this->game->id,
-        'title' => 'Empty Ledger',
-        'slug' => 'empty-ledger',
-        'format' => 'single_elimination',
-        'status' => 'completed',
-        'capacity' => 4,
-        'starts_at' => now()->subDay(),
-        'settings' => ['ranking_ledger' => []],
-    ]);
-
-    Tournament::create([
+    $partial = Tournament::create([
         'organizer_id' => $this->organizer->id,
         'game_id' => $this->game->id,
         'title' => 'Partial Ledger',
@@ -131,7 +102,25 @@ test('malformed empty and orphan ranking_ledger entries are skipped', function (
         ],
     ]);
 
+    Tournament::create([
+        'organizer_id' => $this->organizer->id,
+        'game_id' => $this->game->id,
+        'title' => 'Empty Ledger',
+        'slug' => 'empty-ledger',
+        'format' => 'single_elimination',
+        'status' => 'completed',
+        'capacity' => 4,
+        'starts_at' => now()->subDay(),
+        'settings' => ['ranking_ledger' => []],
+    ]);
+
     $backfill = new RankingLedgerBackfill;
+
+    // PostgreSQL json/jsonb rejects invalid JSON at write time; exercise the
+    // decoder directly so sqlite and pgsql both cover malformed legacy payloads.
+    expect($backfill->backfillTournament($partial->id, '{not-valid-json'))->toBe(0);
+    expect($backfill->backfillTournament($partial->id, null))->toBe(0);
+
     expect($backfill->run())->toBe(1)
         ->and(TournamentRankingAward::count())->toBe(1)
         ->and(TournamentRankingAward::first()->ranking_id)->toBe($ranking->id)

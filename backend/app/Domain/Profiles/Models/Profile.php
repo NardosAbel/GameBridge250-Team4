@@ -96,7 +96,9 @@ class Profile extends Model
             $visibility = $this->is_public ? 'public' : 'private';
         }
 
-        if (! $this->is_public || $visibility === 'private') {
+        // Explicit privacy_settings.visibility is authoritative. is_public is the
+        // legacy fallback when visibility is unset — it must not block followers-only.
+        if ($visibility === 'private') {
             return false;
         }
 
@@ -114,6 +116,10 @@ class Profile extends Model
                 ->exists();
         }
 
-        return $visibility === 'public';
+        if ($visibility === 'public') {
+            return true;
+        }
+
+        return (bool) $this->is_public;
     }
 }

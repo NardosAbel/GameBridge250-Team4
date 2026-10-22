@@ -27,6 +27,10 @@ final class WebhookAuthenticator
     ): array {
         $reference = $this->reference($payload, $referenceKeys);
 
+        // Intentional fail-closed: a shared test HMAC is not Telebirr/Chapa/M-Pesa
+        // live verification. Do not process "production" webhooks until a real
+        // provider-specific verifier exists — enabling this gate would mint tickets
+        // from forged callbacks that happen to know a configured secret format.
         if (! config('services.payments.sandbox')) {
             return $this->reject($reference, 'Live '.$provider.' verification is not implemented. This provider stays disabled.');
         }

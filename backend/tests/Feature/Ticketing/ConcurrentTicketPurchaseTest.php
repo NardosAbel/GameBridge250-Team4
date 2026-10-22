@@ -22,7 +22,7 @@ beforeEach(function () {
         'address' => 'Bole Medhanialem',
         'capacity' => 100,
         'facilities' => ['fiber_internet', 'high_refresh_monitors'],
-        'is_verified' => true,
+        'verified' => true,
     ]);
 
     $this->event = Event::create([

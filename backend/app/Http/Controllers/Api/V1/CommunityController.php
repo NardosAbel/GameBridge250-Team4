@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api\v1;
+namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Communities\Actions\ApproveCommunityMemberAction;
 use App\Domain\Communities\Actions\CreateCommunityAction;

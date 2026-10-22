@@ -54,7 +54,7 @@ class PlatformAnalyticsService
 
         // 4. Venues Performance
         $totalVenues = Venue::count();
-        $verifiedVenues = Venue::where('is_verified', true)->count();
+        $verifiedVenues = Venue::where('verified', true)->count();
 
         // 5. University Participation Ranking
         $universityRankings = Profile::select('university', DB::raw('count(*) as student_count'))

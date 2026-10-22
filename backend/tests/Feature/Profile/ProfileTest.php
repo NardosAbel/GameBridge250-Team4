@@ -124,6 +124,29 @@ test('a followers-only profile is visible to an authenticated follower', functio
         ->assertJsonPath('data.gamer_tag', 'FollowVisible');
 });
 
+test('followers visibility works even when the legacy is_public flag is false', function () {
+    $owner = User::factory()->create();
+    Profile::create([
+        'user_id' => $owner->id,
+        'gamer_tag' => 'FollowLegacyFlag',
+        'is_public' => false,
+        'privacy_settings' => ['visibility' => 'followers'],
+    ]);
+
+    $follower = User::factory()->create();
+    Follow::create([
+        'follower_id' => $follower->id,
+        'followable_type' => $owner->getMorphClass(),
+        'followable_id' => $owner->id,
+    ]);
+
+    $this->getJson('/api/v1/profiles/public/FollowLegacyFlag')->assertNotFound();
+
+    $this->actingAs($follower, 'sanctum')
+        ->getJson('/api/v1/profiles/public/FollowLegacyFlag')
+        ->assertOk();
+});
+
 test('an owner can view their own private profile by gamer tag', function () {
     $owner = User::factory()->create();
     Profile::create([

@@ -25,7 +25,7 @@ beforeEach(function () {
         'city' => 'Adama',
         'address' => 'Main Campus Road',
         'capacity' => 60,
-        'is_verified' => true,
+        'verified' => true,
     ]);
 
     $this->event = Event::create([
@@ -244,6 +244,27 @@ test('a webhook with the wrong amount does not issue tickets', function () {
     ]));
 
     $response->assertStatus(400);
+    expect(Ticket::where('ticket_order_id', $this->order->id)->count())->toBe(0);
+});
+
+test('a webhook that is one cent off does not issue tickets', function () {
+    Payment::create([
+        'ticket_order_id' => $this->order->id,
+        'user_id' => $this->buyer->id,
+        'provider' => 'chapa',
+        'provider_reference' => 'CH-AMT-CENT',
+        'amount' => 200.00,
+        'currency' => 'ETB',
+        'status' => 'pending',
+    ]);
+
+    $this->postJson('/api/v1/payments/webhook/chapa', paymentWebhookPayload('chapa', [
+        'reference' => 'CH-AMT-CENT',
+        'status' => 'completed',
+        'amount' => 200.01,
+        'currency' => 'ETB',
+    ]))->assertStatus(400);
+
     expect(Ticket::where('ticket_order_id', $this->order->id)->count())->toBe(0);
 });
 

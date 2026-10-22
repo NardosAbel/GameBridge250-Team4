@@ -96,11 +96,11 @@ export default function SponsorsIndex() {
             case 'gold':
                 return <Badge variant="warning">Gold Tier</Badge>;
             case 'silver':
-                return <Badge variant="default">Silver Tier</Badge>;
+                return <Badge variant="neutral">Silver Tier</Badge>;
             case 'bronze':
-                return <Badge variant="default">Bronze Tier</Badge>;
+                return <Badge variant="outline">Bronze Tier</Badge>;
             default:
-                return <Badge variant="default">{tier}</Badge>;
+                return <Badge variant="neutral">{tier}</Badge>;
         }
     };
 
@@ -291,7 +291,7 @@ export default function SponsorsIndex() {
                                         <div className="flex items-center gap-1.5">
                                             <h3 className="font-bold text-white text-base">{brand.company_name}</h3>
                                             {brand.verified && (
-                                                <ShieldCheck className="w-4 h-4 text-emerald-400" title="Verified Brand Partner" />
+                                                <ShieldCheck className="w-4 h-4 text-emerald-400" aria-label="Verified Brand Partner" />
                                             )}
                                         </div>
                                         <p className="text-xs text-slate-400">{brand.industry}</p>

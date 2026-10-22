@@ -27,11 +27,12 @@ export const Modal: React.FC<ModalProps> = ({
             return;
         }
 
-        previouslyFocused.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
         const panel = panelRef.current;
-        const focusable = () => Array.from(panel?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []);
-        focusable()[0]?.focus();
+        // Only restore focus to the opener when it lives outside this dialog.
+        previouslyFocused.current = active && panel && !panel.contains(active) ? active : null;
 
+        const focusable = () => Array.from(panel?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []);
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
                 onClose();
@@ -62,10 +63,20 @@ export const Modal: React.FC<ModalProps> = ({
         document.body.style.overflow = 'hidden';
         window.addEventListener('keydown', handleKeyDown);
 
+        // Focus after listeners are registered so an immediate close still restores.
+        const initial =
+            focusable().find((el) => el.getAttribute('aria-label') !== 'Close dialog') ??
+            focusable()[0] ??
+            panel;
+        initial?.focus();
+
         return () => {
             document.body.style.overflow = '';
             window.removeEventListener('keydown', handleKeyDown);
-            previouslyFocused.current?.focus();
+            const previous = previouslyFocused.current;
+            if (previous && document.contains(previous)) {
+                previous.focus();
+            }
         };
     }, [isOpen, onClose]);
 

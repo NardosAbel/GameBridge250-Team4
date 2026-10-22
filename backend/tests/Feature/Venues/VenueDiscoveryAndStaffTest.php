@@ -23,7 +23,7 @@ beforeEach(function () {
         'longitude' => 38.7468,
         'capacity' => 120,
         'facilities' => ['fiber_internet', 'rtx_gaming_pcs', 'streaming_studio'],
-        'is_verified' => true,
+        'verified' => true,
     ]);
 
     // Hawassa (lat: 7.05, lon: 38.47)
@@ -37,7 +37,7 @@ beforeEach(function () {
         'longitude' => 38.4700,
         'capacity' => 40,
         'facilities' => ['fiber_internet', 'ps5_consoles'],
-        'is_verified' => true,
+        'verified' => true,
     ]);
 });
 

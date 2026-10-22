@@ -58,7 +58,8 @@ services:
       POSTGRES_USER: campus_user
       POSTGRES_PASSWORD: campus_password
     ports:
-      - "5432:5432"
+      # Host 5432 is often taken by a local Postgres install; publish on 5433 for Docker.
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

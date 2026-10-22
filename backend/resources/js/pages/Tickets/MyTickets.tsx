@@ -139,14 +139,14 @@ export default function MyTickets() {
             case 'checked_in':
                 return <Badge variant="info">Checked In</Badge>;
             case 'used':
-                return <Badge variant="secondary">Used</Badge>;
+                return <Badge variant="neutral">Used</Badge>;
             case 'transferred':
                 return <Badge variant="warning">Transferred</Badge>;
             case 'refunded':
             case 'revoked':
                 return <Badge variant="danger">{status.toUpperCase()}</Badge>;
             default:
-                return <Badge variant="secondary">{status}</Badge>;
+                return <Badge variant="neutral">{status}</Badge>;
         }
     };
 

@@ -6,18 +6,22 @@ use App\Domain\Ticketing\Models\PromoCode;
 use App\Domain\Ticketing\Models\TicketOrder;
 use App\Domain\Ticketing\Models\TicketType;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class ReleaseTicketInventoryAction
 {
     /**
      * Return reserved inventory for an order exactly once.
+     *
+     * Idempotency is the nullable inventory_released_at timestamp, claimed inside
+     * the same row lock as the quantity change. Buyer-editable notes are ignored.
      */
     public function execute(TicketOrder $order): void
     {
         DB::transaction(function () use ($order): void {
             $order = TicketOrder::whereKey($order->id)->lockForUpdate()->firstOrFail();
-            $notes = $order->notes ?? '';
-            if (str_contains($notes, '[inventory_released]')) {
+
+            if ($order->inventory_released_at !== null) {
                 return;
             }
 
@@ -40,9 +44,13 @@ class ReleaseTicketInventoryAction
                 }
             }
 
-            $order->update([
-                'notes' => trim($notes.' [inventory_released]'),
-            ]);
+            $claimed = TicketOrder::whereKey($order->id)
+                ->whereNull('inventory_released_at')
+                ->update(['inventory_released_at' => now()]);
+
+            if ($claimed !== 1) {
+                throw new RuntimeException('Inventory release could not claim the order after adjusting stock.');
+            }
         });
     }
 }

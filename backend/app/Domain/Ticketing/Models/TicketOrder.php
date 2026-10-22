@@ -32,6 +32,7 @@ class TicketOrder extends Model
         'promo_code_id',
         'billing_details',
         'notes',
+        'inventory_released_at',
     ];
 
     protected static function booted(): void
@@ -54,6 +55,7 @@ class TicketOrder extends Model
             'discount_amount' => 'decimal:2',
             'service_fee' => 'decimal:2',
             'billing_details' => 'array',
+            'inventory_released_at' => 'datetime',
         ];
     }
 

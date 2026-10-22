@@ -264,7 +264,7 @@ test('e2e: gate scanner validation and duplicate scan rejection flow', function 
         'city' => 'Addis Ababa',
         'address' => 'Bole',
         'capacity' => 200,
-        'is_verified' => true,
+        'verified' => true,
     ]);
     VenueStaff::create([
         'venue_id' => $venue->id,

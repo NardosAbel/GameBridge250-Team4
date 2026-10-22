@@ -28,8 +28,8 @@ class TicketReportingService
             $ordersQuery->where('tournament_id', $tournamentId);
         }
 
-        // 1. Sales & Revenue
-        $completedOrders = (clone $ordersQuery)->whereIn('status', ['paid', 'completed'])->get();
+        // 1. Sales & Revenue — only fulfilled orders (payment + ticket issuance).
+        $completedOrders = (clone $ordersQuery)->where('status', 'completed')->get();
         $totalRevenue = (float) $completedOrders->sum('total_amount');
         $totalSubtotal = (float) $completedOrders->sum('subtotal');
         $totalDiscounts = (float) $completedOrders->sum('discount_amount');

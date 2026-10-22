@@ -25,7 +25,7 @@ beforeEach(function () {
         'city' => 'Addis Ababa',
         'address' => 'Bole',
         'capacity' => 100,
-        'is_verified' => true,
+        'verified' => true,
     ]);
 
     $this->event = Event::create([
@@ -99,14 +99,15 @@ test('issuance_slot uniqueness is enforced at the database level', function () {
         'status' => 'active',
     ]);
 
-    expect(fn () => Ticket::create([
-        'ticket_order_id' => $this->order->id,
-        'issuance_slot' => $slot,
-        'ticket_type_id' => $this->ticketType->id,
-        'event_id' => $this->event->id,
-        'user_id' => $this->buyer->id,
-        'status' => 'active',
-    ]))->toThrow(UniqueConstraintViolationException::class);
+    // PostgreSQL aborts the wrapping RefreshDatabase transaction on a unique
+    // violation unless the failing statement runs inside a SAVEPOINT.
+    assertUniqueConstraintRejectsDuplicateIssuanceSlot(
+        orderId: $this->order->id,
+        slot: $slot,
+        ticketTypeId: $this->ticketType->id,
+        eventId: $this->event->id,
+        userId: $this->buyer->id,
+    );
 
     expect(Ticket::where('issuance_slot', $slot)->count())->toBe(1);
 });
@@ -135,10 +136,69 @@ test('issuance recovers when a unique slot collision is raised inside the transa
         ->toBe($existing->pluck('id')->sort()->values()->all());
 });
 
-test('test environment uses sqlite so true parallel issuance races remain unverified', function () {
-    // phpunit.xml forces DB_CONNECTION=sqlite and DB_DATABASE=:memory:.
-    // That setup cannot host two independent writers racing past lockForUpdate
-    // the way production PostgreSQL can. Parallel race safety therefore relies on
-    // lockForUpdate + unique(issuance_slot), not on a live concurrent Pest case.
-    expect(DB::getDriverName())->toBe('sqlite');
+test('issuance_slot uniqueness holds on the active database driver', function () {
+    // Local phpunit.xml defaults to sqlite; CI overrides with PostgreSQL.
+    // Both must enforce the unique issuance_slot invariant. True multi-connection
+    // races are still not simulated here — lockForUpdate + the unique index cover that.
+    expect(['sqlite', 'pgsql'])->toContain(DB::getDriverName());
+
+    $slot = $this->order->id.':'.$this->item->id.':9';
+    Ticket::create([
+        'ticket_order_id' => $this->order->id,
+        'issuance_slot' => $slot,
+        'ticket_type_id' => $this->ticketType->id,
+        'event_id' => $this->event->id,
+        'user_id' => $this->buyer->id,
+        'status' => 'active',
+    ]);
+
+    assertUniqueConstraintRejectsDuplicateIssuanceSlot(
+        orderId: $this->order->id,
+        slot: $slot,
+        ticketTypeId: $this->ticketType->id,
+        eventId: $this->event->id,
+        userId: $this->buyer->id,
+    );
+
+    expect(Ticket::where('issuance_slot', $slot)->count())->toBe(1);
 });
+
+/**
+ * Insert a duplicate issuance_slot and assert the database rejects it without
+ * aborting the outer PHPUnit/RefreshDatabase transaction on PostgreSQL.
+ */
+function assertUniqueConstraintRejectsDuplicateIssuanceSlot(
+    int $orderId,
+    string $slot,
+    int $ticketTypeId,
+    int $eventId,
+    int $userId,
+): void {
+    $connection = DB::connection();
+    $usingSavepoint = $connection->getDriverName() === 'pgsql';
+
+    if ($usingSavepoint) {
+        $connection->statement('SAVEPOINT issuance_slot_unique_check');
+    }
+
+    try {
+        Ticket::create([
+            'ticket_order_id' => $orderId,
+            'issuance_slot' => $slot,
+            'ticket_type_id' => $ticketTypeId,
+            'event_id' => $eventId,
+            'user_id' => $userId,
+            'status' => 'active',
+        ]);
+
+        if ($usingSavepoint) {
+            $connection->statement('ROLLBACK TO SAVEPOINT issuance_slot_unique_check');
+        }
+
+        throw new RuntimeException('Expected UniqueConstraintViolationException was not thrown.');
+    } catch (UniqueConstraintViolationException) {
+        if ($usingSavepoint) {
+            $connection->statement('ROLLBACK TO SAVEPOINT issuance_slot_unique_check');
+        }
+    }
+}

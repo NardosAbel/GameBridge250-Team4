@@ -158,7 +158,7 @@ export default function SponsorsDashboard() {
             case 'rejected':
                 return <Badge variant="danger" className="flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Revision Needed</Badge>;
             default:
-                return <Badge variant="default" className="flex items-center gap-1"><Clock className="w-3 h-3" /> Pending</Badge>;
+                return <Badge variant="neutral" className="flex items-center gap-1"><Clock className="w-3 h-3" /> Pending</Badge>;
         }
     };
 

@@ -76,6 +76,8 @@ class MatchAdvancementService
 
     private function clearPropagatedParticipant(?int $nodeId, ?int $participantId): void
     {
+        // Null node/participant means nothing was propagated on that edge (e.g. no
+        // loser bracket link). There is no downstream match state to clear.
         if (! $nodeId || ! $participantId) {
             return;
         }

@@ -42,17 +42,21 @@ class RefundService
             throw new InvalidArgumentException("Cannot refund order with status '{$order->status}'.");
         }
 
+        if ((float) $order->total_amount <= 0) {
+            throw new InvalidArgumentException('Free orders cannot be refunded.');
+        }
+
         if ($amount <= 0 || $amount > $order->total_amount) {
             throw new InvalidArgumentException("Refund amount must be between 0 and order total ({$order->total_amount}).");
         }
 
         $payment = $order->payments()->where('status', 'paid')->latest()->first();
-        if ($payment === null && (float) $order->total_amount > 0) {
+        if ($payment === null) {
             throw new InvalidArgumentException('This order has no settled payment to refund.');
         }
 
         $refund = Refund::create([
-            'payment_id' => $payment?->id,
+            'payment_id' => $payment->id,
             'ticket_order_id' => $order->id,
             'requested_by_id' => $requester->id,
             'amount' => $amount,

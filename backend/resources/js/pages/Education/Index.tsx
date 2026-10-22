@@ -141,7 +141,7 @@ export default function EducationIndex() {
                                 <span className="p-2 bg-indigo-600/30 text-indigo-400 rounded-lg border border-indigo-500/30">
                                     <GraduationCap className="w-6 h-6" />
                                 </span>
-                                <Badge variant="secondary" className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30">
+                                <Badge variant="accent" className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30">
                                     {locale === 'am' ? 'ዲጂታል አካዳሚ' : 'Digital Awareness Academy'}
                                 </Badge>
                             </div>

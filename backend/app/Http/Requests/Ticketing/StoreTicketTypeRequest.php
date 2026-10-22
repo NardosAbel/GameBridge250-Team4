@@ -25,15 +25,17 @@ class StoreTicketTypeRequest extends FormRequest
 
         $ownsEvent = $event !== null && $event->organizer_id === $user->id;
         $ownsTournament = $tournament !== null && $tournament->organizer_id === $user->id;
+        $bothProvided = $event !== null && $tournament !== null;
+        $linked = ! $bothProvided || (int) ($event->tournament_id ?? 0) === (int) $tournament->id;
 
-        return $ownsEvent || $ownsTournament;
+        return ($ownsEvent || $ownsTournament) && $linked;
     }
 
     public function rules(): array
     {
         return [
-            'event_id' => ['nullable', 'exists:events,id'],
-            'tournament_id' => ['nullable', 'exists:tournaments,id'],
+            'event_id' => ['nullable', 'exists:events,id', 'required_without:tournament_id'],
+            'tournament_id' => ['nullable', 'exists:tournaments,id', 'required_without:event_id'],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
             'category' => ['required', 'string', 'in:free_rsvp,general_admission,vip,student,player_pass,team_pass,staff,press,vendor,early_bird,group,complimentary'],

@@ -105,6 +105,9 @@ class ConfirmMatchResultAction
                 return false;
             }
 
+            // Intentional: only opposing owner/captain/manager may confirm. Any roster
+            // member confirming would allow collusion between teammates. Referees and
+            // organizers still confirm via the official path above.
             return $opposing->members()
                 ->where('user_id', $actor->id)
                 ->whereIn('role', ['owner', 'captain', 'manager'])

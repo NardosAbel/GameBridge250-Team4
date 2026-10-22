@@ -252,7 +252,10 @@ class PaymentProcessingService
             return false;
         }
 
-        $amountsMatch = abs(((float) $verification['amount']) - ((float) $payment->amount)) < 0.009;
+        // Compare minor units (cents) so float noise cannot widen the match window.
+        $paymentCents = (int) round(((float) $payment->amount) * 100);
+        $webhookCents = (int) round(((float) $verification['amount']) * 100);
+        $amountsMatch = $paymentCents === $webhookCents;
         $currency = $verification['currency'] ?? null;
         $currencyMatches = is_string($currency)
             && strtoupper($currency) === strtoupper((string) $payment->currency);

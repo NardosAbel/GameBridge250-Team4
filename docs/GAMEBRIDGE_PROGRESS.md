@@ -20,9 +20,9 @@ Result: **12 passed, 69 assertions** (SQLite via `phpunit.xml`).
 
 `vendor/bin/pint --dirty` passed before the last test assertion tweak.
 
-`npx tsc --noEmit` from `backend` exited 0.
+`npx tsc --noEmit` from `backend` exited 0, including a run after the landing page edit.
 
-`npm run build` from `backend` exited 0 (Vite production build, about 1m 31s).
+`npm run build` from `backend` exited 0 after the rankings and landing edits.
 
 Local commit `b769354` on `security/p0-p1-remediation`. Not pushed. `docker/Dockerfile.pest` was left untracked.
 
@@ -38,8 +38,8 @@ A PostgreSQL Pest run in Docker finished with exit code 0: **173 warnings, 750 a
 
 ## Next
 
-- Confirm the PostgreSQL Pest process result.
-- Walk register → tournament register → result → passport in the browser if the app can start.
+- Walk register → tournament register → result → passport in the browser. The dev server was not started in this pass.
+- Rerun the full PostgreSQL suite on the final tree when there is time. The last Docker run exited 0 but began before the later commits.
 - Do not enable live payment providers.
 
 ## Not done

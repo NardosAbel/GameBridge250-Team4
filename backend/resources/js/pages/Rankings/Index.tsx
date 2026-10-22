@@ -36,6 +36,7 @@ interface Ranking {
         id: number;
         name: string;
         tag?: string;
+        gamer_tag?: string;
         university?: string;
     };
 }
@@ -141,13 +142,13 @@ export default function RankingsIndex() {
                 <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-purple-950 via-slate-900 to-indigo-950 border border-purple-500/20 p-8 sm:p-12 shadow-2xl">
                     <div className="max-w-2xl space-y-4">
                         <Badge variant="outline" className="border-purple-500/30 text-purple-300 font-bold uppercase tracking-wider text-xs">
-                            Season 2026 Competitive Standings
+                            Recorded standings
                         </Badge>
                         <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-                            National Collegiate Rankings
+                            Competitive rankings
                         </h1>
                         <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-                            Official leaderboards tracking tournament placements, competitive points, and Elo ratings across Ethiopian university esports.
+                            Points and ratings stored from finished competitions. A row appears only after a ranking record exists for that game.
                         </p>
                         {isAdmin && (
                             <div className="pt-2">
@@ -222,11 +223,19 @@ export default function RankingsIndex() {
                                             <td className="py-4 px-6 text-center">
                                                 {getRankBadge(r.rank)}
                                             </td>
-                                            <td className="py-4 px-6 font-bold text-white flex items-center gap-2">
-                                                {r.participant.name}
-                                                {r.participant.tag && (
-                                                    <span className="text-xs text-slate-400 font-normal">[{r.participant.tag}]</span>
-                                                )}
+                                            <td className="py-4 px-6 font-bold text-white">
+                                                <div className="flex items-center gap-2">
+                                                    {r.participant.type === 'user' && r.participant.gamer_tag ? (
+                                                        <Link href={`/players/${r.participant.gamer_tag}`} className="hover:text-emerald-300">
+                                                            {r.participant.name}
+                                                        </Link>
+                                                    ) : (
+                                                        <span>{r.participant.name}</span>
+                                                    )}
+                                                    {r.participant.tag && (
+                                                        <span className="text-xs text-slate-400 font-normal">[{r.participant.tag}]</span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="py-4 px-6 text-slate-400">
                                                 {r.participant.university || 'Independent'}

@@ -1,0 +1,11 @@
+# Local Pest image with PostgreSQL. It is not the application image.
+# Run the suite on the compose network and hide the host .env with an empty file mount
+# so tests do not read local secrets and PHP does not warn on a missing .env.
+FROM php:8.3-cli
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libpq-dev git unzip \
+    && docker-php-ext-install pdo_pgsql pgsql \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /var/www/html

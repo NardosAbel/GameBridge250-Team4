@@ -135,7 +135,7 @@ Route::prefix('v1')->group(function () {
         });
 
         // Posts & Social Feed
-        Route::post('/posts', [PostController::class, 'store']);
+        Route::post('/posts', [PostController::class, 'store'])->middleware('throttle:12,1');
         Route::delete('/posts/{post}', [PostController::class, 'destroy']);
         Route::post('/posts/{post}/poll/vote', [PostController::class, 'votePoll']);
         Route::post('/posts/{post}/pin', [PostController::class, 'pin']);
@@ -173,8 +173,11 @@ Route::prefix('v1')->group(function () {
 
         // Team & Community Chat
         Route::prefix('chat')->group(function () {
+            Route::get('/mine', [ChatController::class, 'mine']);
             Route::get('/teams/{team}', [ChatController::class, 'teamChannel']);
             Route::get('/communities/{community}', [ChatController::class, 'communityChannel']);
+            Route::get('/communities/{community}/channels', [ChatController::class, 'communityChannels']);
+            Route::post('/communities/{community}/channels', [ChatController::class, 'storeCommunityChannel']);
             Route::get('/channels/{channel}/messages', [ChatController::class, 'messages']);
             Route::post('/channels/{channel}/messages', [ChatController::class, 'sendMessage']);
         });

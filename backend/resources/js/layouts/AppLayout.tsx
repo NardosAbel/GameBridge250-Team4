@@ -41,7 +41,10 @@ interface PageProps {
 
 export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { t } = useTranslation();
-    const { auth, flash } = usePage<PageProps>().props;
+    const page = usePage<PageProps>();
+    const { auth, flash } = page.props;
+    const currentPath = page.url.split('?')[0];
+    const navClass = (href: string) => `min-h-11 px-3 py-2 text-sm ${currentPath === href || currentPath.startsWith(`${href}/`) ? 'text-lime-300' : 'text-slate-200 hover:text-white'}`;
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const handleLogout = () => {
@@ -64,11 +67,11 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                     {/* Logo */}
                     <div className="flex items-center gap-3">
                         <Link href="/" className="flex items-center gap-3">
-                            <span className="w-8 h-8 border border-amber-200 text-amber-200 text-xs font-semibold flex items-center justify-center">
+                            <span className="flex h-8 w-8 items-center justify-center border border-lime-300 font-display text-xs text-lime-300">
                                 GB
                             </span>
                             <span>
-                                <span className="font-semibold text-sm tracking-tight text-white block leading-none">
+                                <span className="block font-display text-sm leading-none text-white">
                                     GameBridge
                                 </span>
                                 <span className="text-[11px] text-slate-400 block mt-1">
@@ -80,35 +83,27 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
                     {/* Desktop Navigation Links */}
                     <nav className="hidden md:flex items-center gap-1" aria-label="Primary">
-                        <Link href="/tournaments" className="px-3 py-2 text-sm text-slate-200 hover:text-white">
-                            Competitions
-                        </Link>
-                        <Link href="/rankings" className="px-3 py-2 text-sm text-slate-200 hover:text-white">
-                            Rankings
-                        </Link>
-                        <Link href="/teams" className="px-3 py-2 text-sm text-slate-200 hover:text-white">
-                            {t('common.teams')}
-                        </Link>
-                        <Link href="/venues" className="px-3 py-2 text-sm text-slate-200 hover:text-white">
-                            Venues
-                        </Link>
-                        <Link href="/education" className="px-3 py-2 text-sm text-slate-200 hover:text-white">
-                            Learning
-                        </Link>
+                        {auth.user && (
+                            <Link href="/feed" className={navClass('/feed')}>Feed</Link>
+                        )}
+                        <Link href="/tournaments" className={navClass('/tournaments')}>Competitions</Link>
+                        <Link href="/communities" className={navClass('/communities')}>Communities</Link>
+                        <Link href="/teams" className={navClass('/teams')}>{t('common.teams')}</Link>
                         <details className="relative">
-                            <summary className="px-3 py-2 text-sm text-slate-400 hover:text-white cursor-pointer list-none">
+                            <summary className="cursor-pointer list-none px-3 py-2 text-sm text-slate-400 hover:text-white">
                                 More
                             </summary>
-                            <div className="absolute right-0 mt-1 w-44 border border-slate-700 bg-slate-950 py-1 z-50">
-                                <Link href="/feed" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Feed</Link>
-                                <Link href="/communities" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Communities</Link>
+                            <div className="absolute right-0 z-50 mt-1 w-44 border border-slate-700 bg-slate-950 py-1">
+                                <Link href="/rankings" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Rankings</Link>
+                                <Link href="/venues" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Venues</Link>
+                                <Link href="/education" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Learning</Link>
                                 <Link href="/recruitment" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Recruitment</Link>
                                 {auth.user && (
                                     <>
+                                        <Link href="/notifications" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Notifications</Link>
+                                        <Link href="/chat" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Messages</Link>
                                         <Link href="/my-tickets" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Tickets</Link>
                                         <Link href="/scanner" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Gate scan</Link>
-                                        <Link href="/chat" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Chat</Link>
-                                        <Link href="/notifications" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Alerts</Link>
                                         {auth.user.roles.some((r: string) => ['super_admin', 'moderator'].includes(r)) && (
                                             <Link href="/moderation/queue" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Moderation</Link>
                                         )}
@@ -199,13 +194,26 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
                         >
                             {t('common.platform_title')}
                         </Link>
+                        {auth.user && (
+                            <Link href="/feed" onClick={() => setMobileMenuOpen(false)} className="block min-h-11 px-3 py-2 text-sm text-slate-200">
+                                Feed
+                            </Link>
+                        )}
                         <Link
                             href="/tournaments"
                             onClick={() => setMobileMenuOpen(false)}
-                            className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800"
+                            className="block min-h-11 px-3 py-2 text-sm text-slate-200"
                         >
                             {t('common.tournaments')}
                         </Link>
+                        <Link href="/communities" onClick={() => setMobileMenuOpen(false)} className="block min-h-11 px-3 py-2 text-sm text-slate-200">
+                            Communities
+                        </Link>
+                        {auth.user && (
+                            <Link href="/notifications" onClick={() => setMobileMenuOpen(false)} className="block min-h-11 px-3 py-2 text-sm text-slate-200">
+                                Notifications
+                            </Link>
+                        )}
                         <Link
                             href="/rankings"
                             onClick={() => setMobileMenuOpen(false)}
@@ -298,16 +306,36 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             )}
 
             {/* Main Page Content */}
-            <main id="main-content" className="flex-1 w-full" tabIndex={-1}>
+            <main id="main-content" className="flex-1 w-full pb-20 md:pb-0" tabIndex={-1}>
                 {children}
             </main>
+
+            {auth.user && (
+                <nav aria-label="Mobile" className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-800 bg-slate-950 md:hidden">
+                    <div className="grid grid-cols-5">
+                        {[
+                            ['/feed', 'Feed'],
+                            ['/tournaments', 'Events'],
+                            ['/communities', 'Hubs'],
+                            ['/notifications', 'Alerts'],
+                            ['/profile', 'Profile'],
+                        ].map(([href, label]) => (
+                            <Link key={href} href={href} className={`flex min-h-14 items-center justify-center text-xs ${currentPath === href || currentPath.startsWith(`${href}/`) ? 'text-lime-300' : 'text-slate-300'}`}>
+                                {label}
+                            </Link>
+                        ))}
+                    </div>
+                </nav>
+            )}
 
             {/* Footer */}
             <footer className="border-t border-slate-800 py-8 text-sm text-slate-400">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <p>GameBridge · Campus esports for Ethiopia</p>
                     <nav aria-label="Footer" className="flex flex-wrap gap-x-4 gap-y-2">
+                        <Link href="/feed" className="hover:text-white">Feed</Link>
                         <Link href="/tournaments" className="hover:text-white">Competitions</Link>
+                        <Link href="/communities" className="hover:text-white">Communities</Link>
                         <Link href="/teams" className="hover:text-white">Teams</Link>
                         <Link href="/venues" className="hover:text-white">Venues</Link>
                         <Link href="/education" className="hover:text-white">Learning</Link>

@@ -1,264 +1,135 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Head, usePage } from '@inertiajs/react';
+import React, { useEffect, useState } from 'react';
+import { Head, Link } from '@inertiajs/react';
 import { AppLayout } from '../../layouts/AppLayout';
-import { Button } from '../../components/ui/Button';
-import { Card, CardBody } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
-import {
-    MessageSquare,
-    Send,
-    Users,
-    Globe,
-    AtSign,
-    Paperclip,
-    Shield,
-} from 'lucide-react';
 
-interface ChannelItem {
+interface Channel {
     id: number;
-    uuid: string;
     name: string;
-    type: 'team' | 'community' | 'direct';
-    team_id?: number;
-    community_id?: number;
+    type: string;
 }
 
-interface MessageItem {
+interface Message {
     id: number;
-    uuid: string;
-    channel_id: number;
-    user: {
-        id: number;
-        name: string;
-        handle?: string;
-        avatar_url?: string;
-    };
     message: string;
-    mentions: number[];
-    attachment_url?: string;
     created_at: string;
+    user?: { name: string };
+}
+
+function csrfToken(): string {
+    return (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content ?? '';
 }
 
 export default function ChatIndex() {
-    const { auth } = usePage<any>().props;
-    const [channels, setChannels] = useState<ChannelItem[]>([]);
-    const [activeChannel, setActiveChannel] = useState<ChannelItem | null>(null);
-    const [messages, setMessages] = useState<MessageItem[]>([]);
-    const [messageInput, setMessageInput] = useState('');
-    const [loadingMessages, setLoadingMessages] = useState(false);
+    const [channels, setChannels] = useState<Channel[]>([]);
+    const [active, setActive] = useState<Channel | null>(null);
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [draft, setDraft] = useState('');
+    const [error, setError] = useState('');
+    const [listOpen, setListOpen] = useState(true);
     const [sending, setSending] = useState(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Initial mock channels or fetch from teams/communities user is part of
     useEffect(() => {
-        // Fetch teams user belongs to
-        const initChannels = async () => {
-            try {
-                const res = await fetch('/api/v1/teams', { headers: { Accept: 'application/json' } });
-                const data = await res.json();
-                if (data.data?.length > 0) {
-                    const firstTeam = data.data[0];
-                    const chRes = await fetch(`/api/v1/chat/teams/${firstTeam.id}`, { headers: { Accept: 'application/json' } });
-                    const chData = await chRes.json();
-                    if (chData.data) {
-                        setChannels([chData.data]);
-                        setActiveChannel(chData.data);
-                    }
-                }
-            } catch (err) {
-                console.error(err);
-            }
-        };
-
-        if (auth.user) {
-            initChannels();
-        }
+        fetch('/api/v1/chat/mine', { headers: { Accept: 'application/json' } })
+            .then((res) => res.json())
+            .then((body) => {
+                const rows = (body.data ?? []) as Channel[];
+                setChannels(rows);
+                setActive(rows[0] ?? null);
+            })
+            .catch(() => setError('Channels could not be loaded.'));
     }, []);
 
-    // Load messages when active channel changes
     useEffect(() => {
-        if (!activeChannel) return;
-
-        const loadMessages = async () => {
-            setLoadingMessages(true);
-            try {
-                const res = await fetch(`/api/v1/chat/channels/${activeChannel.id}/messages`, {
-                    headers: { Accept: 'application/json' },
-                });
-                const data = await res.json();
-                if (data.data) {
-                    setMessages(data.data);
-                }
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setLoadingMessages(false);
-            }
+        if (!active) return;
+        let cancelled = false;
+        const load = async () => {
+            const res = await fetch(`/api/v1/chat/channels/${active.id}/messages`, { headers: { Accept: 'application/json' } });
+            const body = await res.json();
+            if (!cancelled && res.ok) setMessages(body.data ?? []);
+            if (!res.ok) setError(body.message || 'Messages are not available.');
         };
+        load();
+        const timer = window.setInterval(load, 8000);
+        return () => {
+            cancelled = true;
+            window.clearInterval(timer);
+        };
+    }, [active?.id]);
 
-        loadMessages();
-    }, [activeChannel?.id]);
-
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
-
-    const handleSendMessage = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!activeChannel || !messageInput.trim()) return;
-
+    const send = async (event: React.FormEvent) => {
+        event.preventDefault();
+        if (!active || !draft.trim()) return;
         setSending(true);
-        try {
-            const res = await fetch(`/api/v1/chat/channels/${activeChannel.id}/messages`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as any)?.content || '',
-                },
-                body: JSON.stringify({ message: messageInput }),
-            });
-            if (res.ok) {
-                const newMsg = (await res.json()).data;
-                setMessages([...messages, newMsg]);
-                setMessageInput('');
-            }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setSending(false);
+        const res = await fetch(`/api/v1/chat/channels/${active.id}/messages`, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken(),
+            },
+            body: JSON.stringify({ message: draft.trim() }),
+        });
+        const body = await res.json();
+        setSending(false);
+        if (!res.ok) {
+            setError(body.message || 'Message was not sent.');
+            return;
         }
+        setDraft('');
+        setMessages((current) => [...current, body.data]);
     };
 
     return (
         <AppLayout>
-            <Head title="Chat - Campus Esports Ethiopia" />
-
-            <div className="max-w-6xl mx-auto px-4 py-8">
-                <div className="border border-slate-800 rounded-2xl bg-slate-900/80 backdrop-blur-sm overflow-hidden grid grid-cols-1 md:grid-cols-4 h-[75vh]">
-                    {/* Left Channels Sidebar */}
-                    <div className="border-r border-slate-800 bg-slate-950/60 p-4 space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                                <MessageSquare className="w-4 h-4 text-blue-400" />
-                                Channels
-                            </h2>
-                            <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
-                                Realtime
-                            </span>
-                        </div>
-
-                        <div className="space-y-1">
-                            <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider px-2">
-                                Team & Community Hubs
-                            </span>
-                            {channels.length === 0 ? (
-                                <p className="text-xs text-slate-500 px-2 py-3">
-                                    Join a team or community hub to chat with teammates!
-                                </p>
-                            ) : (
-                                channels.map((ch) => (
-                                    <button
-                                        key={ch.id}
-                                        onClick={() => setActiveChannel(ch)}
-                                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all text-left ${
-                                            activeChannel?.id === ch.id
-                                                ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                                                : 'text-slate-400 hover:text-white hover:bg-slate-900'
-                                        }`}
-                                    >
-                                        {ch.type === 'team' ? (
-                                            <Users className="w-3.5 h-3.5" />
-                                        ) : (
-                                            <Globe className="w-3.5 h-3.5" />
-                                        )}
-                                        <span className="truncate">{ch.name || 'Channel'}</span>
-                                    </button>
-                                ))
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Right Message Feed */}
-                    <div className="md:col-span-3 flex flex-col h-full bg-slate-950/40">
-                        {/* Channel Header */}
-                        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/40">
-                            <div className="flex items-center gap-2">
-                                <span className="font-bold text-sm text-white">
-                                    {activeChannel?.name || 'Select a Channel'}
-                                </span>
-                                {activeChannel && (
-                                    <Badge variant="outline" className="text-[10px] uppercase">
-                                        {activeChannel.type}
-                                    </Badge>
-                                )}
-                            </div>
-                            <span className="text-xs text-slate-500 flex items-center gap-1">
-                                <AtSign className="w-3.5 h-3.5" /> Support @mentions
-                            </span>
-                        </div>
-
-                        {/* Messages Area */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                            {loadingMessages ? (
-                                <div className="text-center text-xs text-slate-500 py-10">
-                                    Loading messages...
-                                </div>
-                            ) : messages.length === 0 ? (
-                                <div className="text-center text-xs text-slate-500 py-16">
-                                    No messages yet. Say hello to your squad!
-                                </div>
-                            ) : (
-                                messages.map((m) => (
-                                    <div
-                                        key={m.id}
-                                        className="flex items-start gap-3 group p-2 rounded-lg hover:bg-slate-900/40 transition-colors"
-                                    >
-                                        <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-xs text-slate-300 shrink-0">
-                                            {m.user?.name?.substring(0, 2).toUpperCase() || 'U'}
-                                        </div>
-                                        <div className="flex-1 space-y-0.5">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs font-bold text-slate-200">
-                                                    {m.user?.name}
-                                                </span>
-                                                <span className="text-[10px] text-slate-500">
-                                                    {new Date(m.created_at).toLocaleTimeString([], {
-                                                        hour: '2-digit',
-                                                        minute: '2-digit',
-                                                    })}
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-slate-300 leading-relaxed">
-                                                {m.message}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                            <div ref={messagesEndRef} />
-                        </div>
-
-                        {/* Message Composer */}
-                        <form onSubmit={handleSendMessage} className="p-3 border-t border-slate-800 flex items-center gap-2 bg-slate-900/40">
-                            <input
-                                type="text"
-                                value={messageInput}
-                                onChange={(e) => setMessageInput(e.target.value)}
-                                placeholder="Message channel... use @handle to mention teammates"
-                                className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                            />
-                            <Button
-                                type="submit"
-                                variant="primary"
-                                size="sm"
-                                disabled={sending || !messageInput.trim() || !activeChannel}
-                            >
-                                <Send className="w-3.5 h-3.5" />
-                            </Button>
-                        </form>
-                    </div>
+            <Head title="Messages" />
+            <div className="mx-auto grid max-w-5xl min-h-[70vh] px-4 py-6 md:grid-cols-[16rem_minmax(0,1fr)]">
+                <div className={`${listOpen ? 'block' : 'hidden'} md:block`}>
+                    <h1 className="font-display text-2xl text-white">Messages</h1>
+                    <p className="mt-2 text-sm text-slate-400">Saved channel history. New messages appear on the next refresh.</p>
+                    {channels.length === 0 && (
+                        <p className="mt-6 text-sm text-slate-400">
+                            No channel is open yet. <Link href="/communities" className="text-lime-300 hover:underline">Join a community</Link> and open it to start one.
+                        </p>
+                    )}
+                    <ul className="mt-4">
+                        {channels.map((channel) => (
+                            <li key={channel.id}>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setActive(channel);
+                                        setListOpen(false);
+                                    }}
+                                    className={`block min-h-11 w-full text-left text-sm ${active?.id === channel.id ? 'text-lime-300' : 'text-slate-200'}`}
+                                >
+                                    {channel.name}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
+                <section className={`${listOpen ? 'hidden' : 'flex'} flex-col md:flex`}>
+                    <button type="button" className="mb-3 min-h-11 text-left text-sm text-lime-300 md:hidden" onClick={() => setListOpen(true)}>
+                        All channels
+                    </button>
+                    <h2 className="font-display text-xl text-white">{active?.name ?? 'Choose a channel'}</h2>
+                    {error && <p className="mt-3 text-sm text-rose-300" role="alert">{error}</p>}
+                    <div className="mt-4 flex-1 space-y-3">
+                        {messages.map((message) => (
+                            <p key={message.id} className="text-sm">
+                                <span className="text-slate-400">{message.user?.name ?? 'Player'}</span>
+                                <span className="mt-1 block">{message.message}</span>
+                            </p>
+                        ))}
+                    </div>
+                    {active && (
+                        <form onSubmit={send} className="mt-4 flex gap-2">
+                            <label htmlFor="chat-message" className="sr-only">Message</label>
+                            <input id="chat-message" value={draft} onChange={(event) => setDraft(event.target.value)} className="min-h-11 flex-1 border border-slate-700 bg-transparent px-3 text-sm" />
+                            <button type="submit" disabled={sending} className="min-h-11 bg-lime-300 px-4 text-sm text-slate-950">{sending ? 'Sending…' : 'Send'}</button>
+                        </form>
+                    )}
+                </section>
             </div>
         </AppLayout>
     );

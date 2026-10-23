@@ -33,4 +33,17 @@ class GetOrCreateChatChannelAction
             ]
         );
     }
+
+    public function namedCommunityChannel(Community $community, string $name): ChatChannel
+    {
+        $name = trim($name);
+
+        return ChatChannel::firstOrCreate(
+            [
+                'type' => 'community',
+                'community_id' => $community->id,
+                'name' => $name,
+            ]
+        );
+    }
 }

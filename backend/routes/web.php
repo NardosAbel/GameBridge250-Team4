@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Social\Models\Post;
 use App\Domain\Tournaments\Models\Tournament;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\DashboardController;
@@ -20,6 +21,12 @@ use Inertia\Inertia;
 Route::get('/', HomeController::class)->name('home');
 
 Route::get('/players/{handle}', [PlayerPassportController::class, 'show'])->name('players.passport');
+
+Route::get('/posts/{post}', function (Post $post) {
+    Gate::authorize('view', $post);
+
+    return Inertia::render('Social/PostShow', ['postId' => $post->id]);
+})->name('posts.show');
 
 // Guest Authentication Routes
 Route::middleware(['guest', 'throttle:10,1'])->group(function () {

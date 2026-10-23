@@ -129,10 +129,38 @@ Browser on that server, signed in as YonasBekele unless noted:
 
 These edits are not committed. Nothing was pushed.
 
+## Social feed, communities, and identity, 2026-10-23
+
+The existing posts, follows, comments, reactions, communities, and chat tables were reused. New work connects them into the product shell.
+
+- Navigation puts Feed, Competitions, Communities, and Teams first. Signed-in mobile screens use a bottom bar: Feed, Events, Hubs, Alerts, Profile. Rankings, venues, learning, tickets, messages, and moderation stay under More.
+- Headings use Space Grotesk. Body text stays Inter. The accent is `#A3E635` on charcoal. Light mode remaps lime text so it stays readable. Theme persistence is unchanged.
+- `/feed` is a persisted composer: text, one image (jpeg, png, or webp, 5 MB), an optional public tournament, organizer announcements, and a sponsor flag. Video and livestream types are rejected. Posts are rate-limited.
+- A player can like once; a second tap removes the like. Comments and new likes notify the author in the existing notification table. The post link is `/posts/{id}`.
+- An announcement must be tied to a tournament the author can update. `sponsored` is stored only for a sponsor or super admin. A team id is accepted only for a member or leader. A community id requires membership.
+- A community page lists real channels, creates a general channel for a member when none exists, and lets a manager add a named channel. Messages are stored and refreshed about every 8 seconds. There is no fake online presence or unread count. A non-member cannot read a private community channel.
+- A public passport shows follower count from `follows`, a follow button, and that player's public posts. Likes do not affect rankings.
+
+SQLite, `PHPRC` set, environment database variables cleared so phpunit uses sqlite:
+
+`php vendor/bin/pest tests/Feature/Social/SocialPlatformTest.php`
+
+Result: **5 passed, 28 assertions**. Covers a post linked to a published tournament, like then unlike, a comment notification, a forbidden delete, a rejected player announcement, an organizer announcement, a rejected fake sponsorship, a sponsor post, a rejected team post, private channel 403, and follow/unfollow.
+
+`php vendor/bin/pest tests/Feature/Web/PlayerDashboardAndPassportTest.php` — **3 passed, 48 assertions**.
+
+`php vendor/bin/pint --dirty` fixed import order in `PostResource.php` and otherwise passed. `npx tsc --noEmit` exit 0. There is no frontend lint script. `npm run build` exit 0.
+
+The new columns `posts.tournament_id` and `posts.sponsored` were applied inside the Docker database `campus_esports` and recorded in `migrations`. No rows were deleted. The container role password was set to the password in `docker-compose.yml` so it matches that file. Host IPv4 port 5433 is still a different local Postgres, and the container address `172.19.0.3` is not reachable from this Windows host, so `php artisan migrate` from the host did not run.
+
+Browser: `/login` rendered the new header and footer. A login POST was started as `player@campusesports.et` and did not finish, because the PHP server could not complete a Postgres connection from the host. The composer, like, comment, and community message were not clicked. Nothing was committed or pushed.
+
 ## Next
 
 - Generate a bracket only when an event has enough real entrants, then confirm a result in the browser and open that player's passport.
-- The organizer manage page body still uses the older panel layout. Venues, feed, chat, tickets, scanner, profile edit, rankings, communities, and sponsorship were not redesigned in this pass.
+- The organizer manage page body still uses the older panel layout. Venues, tickets, scanner, rankings, and sponsorship were not redesigned in this pass.
+- Video posts, WebSocket delivery, unread badges, and typing presence are not implemented. Messages refresh on an 8 second poll.
+- Feed, community chat, and follow were not clicked in the browser. Widths 360, 768, 1024, and 1440 were not measured in this pass.
 - Kilo Rifles still has no roster rows, so it can show 0 players. THE OZES has a pre-existing pending join request that was not reviewed in the browser.
 - Tablet and wide-desktop layouts were not measured separately. The 390×844 check used device emulation and was cleared afterward.
 - Do not enable live payment providers.

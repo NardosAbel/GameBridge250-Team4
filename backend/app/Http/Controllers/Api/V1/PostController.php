@@ -18,7 +18,7 @@ class PostController extends Controller
     public function index(Request $request, FeedService $feedService): JsonResponse
     {
         $feedType = $request->query('feed', 'personalized');
-        $filters = $request->only(['game_id', 'community_id', 'team_id', 'hashtag', 'per_page']);
+        $filters = $request->only(['game_id', 'community_id', 'team_id', 'user_id', 'tournament_id', 'hashtag', 'per_page']);
 
         $posts = $feedService->getFeed(
             user: $request->user(),

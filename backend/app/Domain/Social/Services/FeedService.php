@@ -20,7 +20,28 @@ class FeedService
     public function getFeed(?User $user = null, string $type = 'personalized', array $filters = []): LengthAwarePaginator
     {
         $query = Post::query()
-            ->with(['user.profile', 'media', 'game', 'community', 'team'])
+            ->with([
+                'user.profile',
+                'media',
+                'game',
+                'community',
+                'team',
+                'tournament',
+                'reactions' => function ($reactionQuery) use ($user) {
+                    if ($user) {
+                        $reactionQuery->where('user_id', $user->id);
+                    } else {
+                        $reactionQuery->whereRaw('1 = 0');
+                    }
+                },
+                'bookmarks' => function ($bookmarkQuery) use ($user) {
+                    if ($user) {
+                        $bookmarkQuery->where('user_id', $user->id);
+                    } else {
+                        $bookmarkQuery->whereRaw('1 = 0');
+                    }
+                },
+            ])
             ->withCount(['comments', 'reactions', 'shares']);
 
         // Exclude blocked and muted users if user is authenticated
@@ -51,6 +72,14 @@ class FeedService
         // Apply team filter if requested
         if (! empty($filters['team_id'])) {
             $query->where('team_id', $filters['team_id']);
+        }
+
+        if (! empty($filters['user_id'])) {
+            $query->where('user_id', $filters['user_id']);
+        }
+
+        if (! empty($filters['tournament_id'])) {
+            $query->where('tournament_id', $filters['tournament_id']);
         }
 
         // Apply hashtag filter if requested

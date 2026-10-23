@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Domain\Chat\Models\ChatChannel;
 use App\Domain\Communities\Models\CommunityMember;
+use App\Domain\Teams\Models\Team;
 use App\Domain\Teams\Models\TeamMember;
 use App\Models\User;
 
@@ -16,7 +17,12 @@ class ChatChannelPolicy
         }
 
         if ($channel->type === 'team' && $channel->team_id) {
-            return TeamMember::where('team_id', $channel->team_id)
+            $leadsTeam = Team::query()
+                ->whereKey($channel->team_id)
+                ->where('leader_id', $user->id)
+                ->exists();
+
+            return $leadsTeam || TeamMember::where('team_id', $channel->team_id)
                 ->where('user_id', $user->id)
                 ->where('status', 'active')
                 ->exists();

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Heart, ImagePlus, MessageCircle, Link2 } from 'lucide-react';
 import { AppLayout } from '../../layouts/AppLayout';
+import { Avatar } from '../../components/ui/Avatar';
 
 interface PostItem {
     id: number;
@@ -9,7 +10,7 @@ interface PostItem {
     type: string;
     sponsored: boolean;
     created_at: string;
-    author: { id: number; name: string; handle?: string };
+    author: { id: number; name: string; handle?: string; avatar_url?: string | null };
     media: Array<{ id: number; media_url: string; media_type: string }>;
     tournament?: { id: number; title: string } | null;
     community?: { id: number; name: string } | null;
@@ -34,7 +35,7 @@ function when(iso: string): string {
 }
 
 export default function Feed() {
-    const { auth } = usePage<{ auth: { user: { id: number; roles: string[] } | null } }>().props;
+    const { auth } = usePage<{ auth: { user: { id: number; name: string; roles: string[]; profile?: { gamer_tag?: string; avatar_url?: string | null } } | null } }>().props;
     const roles = auth.user?.roles ?? [];
     const canAnnounce = roles.some((role) => ['organizer', 'super_admin'].includes(role));
     const canSponsor = roles.some((role) => ['sponsor', 'super_admin'].includes(role));
@@ -54,8 +55,9 @@ export default function Feed() {
     const [formError, setFormError] = useState('');
     const [notice, setNotice] = useState('');
     const [openComments, setOpenComments] = useState<number | null>(null);
-    const [comments, setComments] = useState<Record<number, Array<{ id: number; content: string; author?: { name: string } }>>>({});
+    const [comments, setComments] = useState<Record<number, Array<{ id: number; content: string; author?: { name: string }; user?: { name?: string; profile?: { avatar_url?: string | null; gamer_tag?: string | null } } }>>>({});
     const [commentText, setCommentText] = useState('');
+    const [preview, setPreview] = useState<string | null>(null);
 
     const load = async (nextPage = 1, append = false) => {
         setLoading(true);
@@ -66,7 +68,7 @@ export default function Feed() {
             });
             const body = await res.json();
             if (!res.ok) {
-                setError(body.message || 'The feed could not be loaded.');
+                setError(res.status === 422 ? (body.message || 'The feed could not be loaded.') : 'The feed could not be loaded.');
                 return;
             }
             const rows = (body.data ?? []) as PostItem[];
@@ -202,7 +204,7 @@ export default function Feed() {
     return (
         <AppLayout>
             <Head title="Feed" />
-            <div className="mx-auto grid max-w-6xl gap-10 px-4 py-8 lg:grid-cols-[minmax(0,40rem)_16rem]">
+            <div className="mx-auto grid max-w-6xl gap-12 px-4 py-8 lg:grid-cols-[minmax(0,40rem)_18rem]">
                 <div>
                     <header className="mb-6">
                         <p className="font-display text-sm text-lime-300">GameBridge</p>
@@ -211,6 +213,10 @@ export default function Feed() {
                     </header>
 
                     <form onSubmit={publish} className="border-y border-slate-800 py-5">
+                        <div className="mb-3 flex items-center gap-3">
+                            <Avatar name={auth.user?.profile?.gamer_tag || auth.user?.name || 'You'} src={auth.user?.profile?.avatar_url} size="sm" />
+                            <p className="text-sm text-white">{auth.user?.profile?.gamer_tag || auth.user?.name}</p>
+                        </div>
                         <label htmlFor="post-content" className="sr-only">Post</label>
                         <textarea
                             id="post-content"
@@ -284,14 +290,18 @@ export default function Feed() {
                     <ol className="divide-y divide-slate-800">
                         {posts.map((post) => (
                             <li key={post.id} className="py-6">
-                                <div className="flex items-baseline justify-between gap-3">
+                                <div className="flex gap-3">
+                                    <Avatar name={post.author.handle || post.author.name || 'Player'} src={post.author.avatar_url} size="sm" />
+                                    <div className="flex min-w-0 flex-1 items-baseline justify-between gap-3">
                                     {post.author.handle ? (
                                         <Link href={`/players/${post.author.handle}`} className="font-medium text-white hover:underline">{post.author.handle}</Link>
                                     ) : (
                                         <span className="font-medium text-white">{post.author.name}</span>
                                     )}
                                     <time className="text-xs text-slate-500" dateTime={post.created_at}>{when(post.created_at)}</time>
+                                    </div>
                                 </div>
+                                <div className="pl-12">
                                 <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-400">
                                     {post.sponsored && <span className="text-lime-300">Sponsored</span>}
                                     {post.type === 'announcement' && <span>Announcement</span>}
@@ -305,7 +315,9 @@ export default function Feed() {
                                     </Link>
                                 )}
                                 {post.media.filter((file) => file.media_type === 'image').map((file) => (
-                                    <img key={file.id} src={file.media_url} alt="" className="mt-3 max-h-96 w-full object-cover" />
+                                    <button key={file.id} type="button" onClick={() => setPreview(file.media_url)} className="mt-3 block w-full">
+                                        <img src={file.media_url} alt="" className="max-h-[32rem] w-full object-cover" />
+                                    </button>
                                 ))}
                                 <div className="mt-4 flex flex-wrap items-center gap-2">
                                     <button type="button" onClick={() => toggleLike(post)} className="inline-flex min-h-11 items-center gap-2 px-2 text-sm text-slate-300">
@@ -327,10 +339,13 @@ export default function Feed() {
                                 {openComments === post.id && (
                                     <div className="mt-3 space-y-3 border-l border-slate-800 pl-4">
                                         {(comments[post.id] ?? []).map((comment) => (
-                                            <p key={comment.id} className="text-sm text-slate-200">
-                                                <span className="text-slate-400">{comment.author?.name || (comment as { user?: { name?: string } }).user?.name || 'Player'}: </span>
-                                                {comment.content}
-                                            </p>
+                                            <div key={comment.id} className="flex gap-2 text-sm text-slate-200">
+                                                <Avatar name={comment.user?.profile?.gamer_tag || comment.user?.name || comment.author?.name || 'Player'} src={comment.user?.profile?.avatar_url} size="sm" />
+                                                <p>
+                                                    <span className="text-slate-400">{comment.user?.profile?.gamer_tag || comment.user?.name || comment.author?.name || 'Player'}</span>
+                                                    <span className="mt-1 block">{comment.content}</span>
+                                                </p>
+                                            </div>
                                         ))}
                                         <form
                                             className="flex gap-2"
@@ -350,6 +365,7 @@ export default function Feed() {
                                         </form>
                                     </div>
                                 )}
+                                </div>
                             </li>
                         ))}
                     </ol>
@@ -360,11 +376,28 @@ export default function Feed() {
                     )}
                 </div>
                 <aside className="hidden lg:block">
-                    <p className="text-sm text-slate-400">Competitions stay on their own pages. A like does not change a ranking.</p>
-                    <Link href="/tournaments" className="mt-4 inline-block text-sm text-lime-300 hover:underline">Browse competitions</Link>
-                    <Link href="/communities" className="mt-2 block text-sm text-lime-300 hover:underline">Find a community</Link>
+                    <p className="font-display text-sm text-lime-300">Open competitions</p>
+                    {tournaments.length === 0 ? (
+                        <p className="mt-4 text-sm text-slate-500">No published competitions are listed.</p>
+                    ) : (
+                        <ul className="mt-4 divide-y divide-slate-800 border-y border-slate-800">
+                            {tournaments.slice(0, 5).map((tournament) => (
+                                <li key={tournament.id}>
+                                    <Link href={`/tournaments/${tournament.id}`} className="block py-3 text-sm text-white hover:text-lime-300">
+                                        {tournament.title}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    <p className="mt-6 text-sm text-slate-500">A like does not change a ranking.</p>
                 </aside>
             </div>
+            {preview && (
+                <button type="button" className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setPreview(null)}>
+                    <img src={preview} alt="" className="max-h-[90vh] max-w-full object-contain" />
+                </button>
+            )}
         </AppLayout>
     );
 }

@@ -7,6 +7,7 @@ use App\Domain\Social\Models\Comment;
 use App\Domain\Social\Models\Post;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Post\StoreCommentRequest;
+use App\Http\Resources\CommentResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -24,7 +25,7 @@ class CommentController extends Controller
             ->paginate(20);
 
         return response()->json([
-            'data' => $comments->items(),
+            'data' => CommentResource::collection($comments->items()),
             'meta' => [
                 'current_page' => $comments->currentPage(),
                 'last_page' => $comments->lastPage(),
@@ -46,7 +47,7 @@ class CommentController extends Controller
 
         return response()->json([
             'message' => 'Comment added successfully.',
-            'data' => $comment,
+            'data' => new CommentResource($comment->load('user.profile')),
         ], 201);
     }
 

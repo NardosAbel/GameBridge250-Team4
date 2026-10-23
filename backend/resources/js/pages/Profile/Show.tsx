@@ -1,16 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import { AppLayout } from '../../layouts/AppLayout';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
+import { Avatar } from '../../components/ui/Avatar';
 import {
-    User,
-    ShieldCheck,
-    GraduationCap,
-    Gamepad2,
-    Globe,
     Save,
     CheckCircle2,
 } from 'lucide-react';
@@ -68,9 +63,34 @@ export default function Show({ user, profile, passport }: ProfileProps) {
         locale: user.locale || 'en',
     });
 
+    const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
+    const [avatarError, setAvatarError] = useState('');
+    const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         put('/profile');
+    };
+
+    const uploadAvatar = async (file: File) => {
+        setUploadingAvatar(true);
+        setAvatarError('');
+        const form = new FormData();
+        form.append('avatar', file);
+        const token = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content ?? '';
+        const res = await fetch('/api/v1/profile/avatar', {
+            method: 'POST',
+            headers: { Accept: 'application/json', 'X-CSRF-TOKEN': token },
+            body: form,
+        });
+        const body = await res.json();
+        setUploadingAvatar(false);
+        if (!res.ok) {
+            const field = body.errors?.avatar?.[0];
+            setAvatarError(field || body.message || 'The picture was not saved.');
+            return;
+        }
+        setAvatarUrl(body.data?.avatar_url || '');
     };
 
     return (
@@ -79,44 +99,36 @@ export default function Show({ user, profile, passport }: ProfileProps) {
 
             <div className="max-w-5xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8">
                 {/* Profile Header Banner */}
-                <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-emerald-900/60 via-slate-900 to-indigo-900/60 border border-slate-800 p-8 shadow-xl">
-                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left">
-                        <div className="w-24 h-24 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-slate-950 flex items-center justify-center font-extrabold text-3xl shadow-2xl">
-                            {data.gamer_tag.substring(0, 2).toUpperCase() || user.name.substring(0, 2).toUpperCase()}
-                        </div>
-
-                        <div className="space-y-2 flex-1">
-                            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                                <h1 className="text-3xl font-extrabold text-white">
-                                    {data.gamer_tag || user.name}
-                                </h1>
-                                {profile?.student_verified ? (
-                                    <Badge variant="success" size="md" className="flex items-center gap-1">
-                                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                                        <span>Verified Student</span>
-                                    </Badge>
-                                ) : (
-                                    <Badge variant="neutral" size="md">
-                                        Student ID Pending
-                                    </Badge>
-                                )}
-                                {user.roles[0] && (
-                                    <Badge variant="accent" size="md">
-                                        {user.roles[0].replace('_', ' ')}
-                                    </Badge>
-                                )}
-                            </div>
-
-                            <p className="text-sm text-slate-300 font-medium">
-                                {user.name} • {data.university || 'No campus selected'}
-                            </p>
-
-                            <p className="text-xs text-slate-400 max-w-xl">
-                                {data.bio || 'No bio written yet. Share your gaming journey and achievements.'}
-                            </p>
-                        </div>
+                <header className="flex items-start gap-4 border-b border-slate-800 pb-6">
+                    <Avatar name={data.gamer_tag || user.name} src={avatarUrl} size="lg" />
+                    <div className="min-w-0">
+                    <h1 className="break-words font-display text-3xl text-white sm:text-5xl">{data.gamer_tag || user.name}</h1>
+                    <p className="mt-2 text-sm text-slate-300">
+                        {user.name}
+                        {data.university ? ` · ${data.university}` : ''}
+                        {profile?.student_verified ? ' · Verified student' : ''}
+                        {user.roles[0] ? ` · ${user.roles[0].replace('_', ' ')}` : ''}
+                    </p>
+                    {data.bio && <p className="mt-4 max-w-2xl text-sm leading-relaxed text-slate-300">{data.bio}</p>}
+                    <p className="mt-4 text-sm text-slate-400">
+                        {passport.tournament_count} entered · {passport.verified_result_count} confirmed results
+                        {passport.rating !== null ? ` · rating ${passport.rating}` : ''}
+                    </p>
+                    <label className="mt-4 inline-flex min-h-11 cursor-pointer items-center text-sm text-lime-300">
+                        {uploadingAvatar ? 'Uploading picture…' : 'Change profile picture'}
+                        <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            className="sr-only"
+                            onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                if (file) uploadAvatar(file);
+                            }}
+                        />
+                    </label>
+                    {avatarError && <p className="mt-2 text-sm text-rose-300" role="alert">{avatarError}</p>}
                     </div>
-                </div>
+                </header>
 
                 {/* Profile Edit Form & Info */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -142,14 +154,14 @@ export default function Show({ user, profile, passport }: ProfileProps) {
                                 />
 
                                 <div className="space-y-1.5 text-left">
-                                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                                    <label className="block text-sm text-slate-300">
                                         {t('profile.bio')}
                                     </label>
                                     <textarea
                                         rows={3}
                                         value={data.bio}
                                         onChange={(e) => setData('bio', e.target.value)}
-                                        className="w-full rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-100 text-sm p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500"
+                                        className="w-full border border-slate-700 bg-transparent p-3 text-sm text-slate-100 focus:border-lime-300 focus:outline-none"
                                         placeholder="Tell other students what games you play, your ranks, and tournament experience..."
                                     />
                                     {errors.bio && <p className="text-xs text-rose-400">{errors.bio}</p>}

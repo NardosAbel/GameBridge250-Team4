@@ -15,14 +15,14 @@ export const Badge: React.FC<BadgeProps> = ({
     ...props
 }) => {
     const variants = {
-        primary: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-        success: 'bg-teal-500/15 text-teal-300 border-teal-500/30',
-        warning: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-        danger: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
-        neutral: 'bg-slate-800 text-slate-300 border-slate-700',
-        accent: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30',
-        outline: 'bg-transparent text-slate-400 border-slate-700',
-        info: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
+        primary: 'text-lime-300',
+        success: 'text-lime-300',
+        warning: 'text-amber-200',
+        danger: 'text-rose-300',
+        neutral: 'text-slate-400',
+        accent: 'text-lime-300',
+        outline: 'text-slate-400',
+        info: 'text-slate-300',
     };
 
     const sizes = {
@@ -34,7 +34,7 @@ export const Badge: React.FC<BadgeProps> = ({
         <span
             className={twMerge(
                 clsx(
-                    'inline-flex items-center font-medium rounded-full border tracking-wide uppercase',
+                    'inline-flex items-center font-medium',
                     variants[variant],
                     sizes[size],
                     className

@@ -24,8 +24,8 @@
     "light_mode": "Light Mode"
   },
   "auth": {
-    "welcome_back": "Welcome back, Champion",
-    "login_sub": "Enter your email or phone number to access your account",
+    "welcome_back": "Sign in",
+    "login_sub": "Use the email or phone on your player account.",
     "create_account": "Join Campus Esports Ethiopia",
     "register_sub": "Connect with university teams, compete in tournaments, and build your gaming identity",
     "full_name": "Full Name",

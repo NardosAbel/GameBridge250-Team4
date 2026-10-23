@@ -347,7 +347,22 @@ export default function TournamentShow({ tournamentId }: Props) {
     const isTeamEntry = tournament.entry_type === 'team';
     const registration = tournament.viewer_registration as { status: string } | null;
     const registrationOpen = tournament.status === 'registration_open';
-    const isFull = Number(tournament.capacity) > 0 && Number(tournament.participants_count) >= Number(tournament.capacity);
+    const reservedCount = Number(tournament.reserved_count ?? tournament.participants_count ?? 0);
+    const isFull = Number(tournament.capacity) > 0 && reservedCount >= Number(tournament.capacity);
+    const registrationLabel = registration?.status === 'pending'
+        ? 'Application pending'
+        : registration?.status === 'approved'
+            ? 'Registration approved'
+            : registration?.status === 'rejected'
+                ? 'Application not approved'
+                : registration?.status
+                    ? registration.status.replace(/_/g, ' ')
+                    : '';
+    const registrationTone = registration?.status === 'approved'
+        ? 'text-lime-300'
+        : registration?.status === 'rejected'
+            ? 'text-rose-300'
+            : 'text-amber-300';
     const eligibilityIssue = typeof tournament.viewer_eligibility === 'string' && tournament.viewer_eligibility
         ? tournament.viewer_eligibility
         : null;
@@ -363,12 +378,12 @@ export default function TournamentShow({ tournamentId }: Props) {
 
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
                 <header className="border-b border-slate-800 pb-8">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200/80">
+                    <p className="font-display text-sm text-lime-300">
                         {tournament.game?.name || 'Competition'}
                     </p>
                     <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
                         <div className="max-w-2xl">
-                            <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
+                            <h1 className="font-display text-4xl text-white sm:text-5xl">
                                 {tournament.title}
                             </h1>
                             <p className="mt-3 text-sm text-slate-300">
@@ -380,26 +395,26 @@ export default function TournamentShow({ tournamentId }: Props) {
                         </div>
                         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                             {registration ? (
-                                <p className="text-sm text-amber-200" role="status">
-                                    You are registered ({registration.status.replace(/_/g, ' ')}).
+                                <p className={`text-sm ${registrationTone}`} role="status">
+                                    {registrationLabel}
                                 </p>
                             ) : registrationOpen && !auth?.user ? (
                                 <Link href="/login">
-                                    <Button variant="primary">Sign in to register</Button>
+                                    <Button variant="primary">Sign in to apply</Button>
                                 </Link>
                             ) : registrationOpen && isFull ? (
-                                <p className="text-sm text-slate-300">This competition is full.</p>
+                                <p className="text-sm text-slate-300">This competition is full. Pending and approved applications are using every place.</p>
                             ) : registrationOpen && eligibilityIssue ? (
                                 <p className="text-sm text-slate-300" role="status">{eligibilityIssue}</p>
                             ) : registrationOpen ? (
                                 <Button variant="primary" onClick={() => setShowRegisterModal(true)}>
-                                    {isTeamEntry ? 'Register team' : 'Register'}
+                                    {isTeamEntry ? 'Apply with your team' : 'Apply to compete'}
                                 </Button>
                             ) : (
                                 <p className="text-sm text-slate-300">Registration is closed.</p>
                             )}
 
-                            {registration && ['registration_closed', 'check_in'].includes(tournament.status) && (
+                            {registration?.status === 'approved' && ['registration_closed', 'check_in'].includes(tournament.status) && (
                                 <Button variant="secondary" onClick={handleTournamentCheckIn}>
                                     Check in
                                 </Button>
@@ -427,7 +442,7 @@ export default function TournamentShow({ tournamentId }: Props) {
                             </div>
                         )}
                         <div>
-                            <dt className="text-slate-500">Entered</dt>
+                            <dt className="text-slate-500">Approved entrants</dt>
                             <dd className="mt-1 text-white">{tournament.participants_count} of {tournament.capacity}</dd>
                         </div>
                         {tournament.starts_at && (
@@ -476,8 +491,8 @@ export default function TournamentShow({ tournamentId }: Props) {
                             aria-selected={activeTab === id}
                             aria-controls={`panel-${id}`}
                             onClick={() => setActiveTab(id)}
-                            className={`min-h-11 whitespace-nowrap border-b-2 px-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200 ${
-                                activeTab === id ? 'border-amber-200 text-white' : 'border-transparent text-slate-400 hover:text-white'
+                            className={`min-h-11 whitespace-nowrap border-b-2 px-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-300 ${
+                                activeTab === id ? 'border-lime-300 text-white' : 'border-transparent text-slate-400 hover:text-white'
                             }`}
                         >
                             {label}
@@ -504,7 +519,7 @@ export default function TournamentShow({ tournamentId }: Props) {
                                             const roundNodes = b.nodes.filter((n: any) => n.round === roundNum);
                                             return (
                                                 <div key={roundNum} className="flex-1 space-y-4">
-                                                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 text-center pb-2 border-b border-slate-800">
+                                                    <h4 className="border-b border-slate-800 pb-2 text-center text-sm text-slate-400">
                                                         {roundNum === 100 ? 'Grand Final' : roundNum === 99 ? 'Lower Bracket Final' : `Round ${roundNum}`}
                                                     </h4>
                                                     <div className="space-y-6">
@@ -516,19 +531,17 @@ export default function TournamentShow({ tournamentId }: Props) {
                                                                     key={node.id}
                                                                     disabled={!m}
                                                                     onClick={() => m && openMatchDetails(m.id)}
-                                                                    className={`w-full p-3 rounded-xl border text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200 disabled:cursor-default ${
+                                                                    className={`w-full border p-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-300 disabled:cursor-default ${
                                                                         m?.status === 'live'
-                                                                            ? 'bg-red-500/10 border-red-500/50'
-                                                                            : m?.status === 'completed'
-                                                                            ? 'bg-slate-950/80 border-slate-800 hover:border-slate-700'
-                                                                            : 'bg-slate-950/40 border-slate-800/60 hover:border-amber-200/40'
+                                                                            ? 'border-rose-700'
+                                                                            : 'border-slate-800 hover:border-slate-600'
                                                                     }`}
                                                                 >
                                                                     <div className="space-y-1.5 text-xs">
                                                                         {/* Participant 1 */}
-                                                                        <div className={`flex items-center justify-between p-1.5 rounded-lg ${
+                                                                        <div className={`flex items-center justify-between py-1 ${
                                                                             m?.winner_id && m.winner_id === m.participant1_id
-                                                                                ? 'bg-emerald-500/20 text-emerald-300 font-bold'
+                                                                                ? 'font-medium text-lime-300'
                                                                                 : 'text-slate-300'
                                                                         }`}>
                                                                             <span className="truncate max-w-[120px]">{m?.participant1_name || 'TBD'}</span>
@@ -536,9 +549,9 @@ export default function TournamentShow({ tournamentId }: Props) {
                                                                         </div>
 
                                                                         {/* Participant 2 */}
-                                                                        <div className={`flex items-center justify-between p-1.5 rounded-lg ${
+                                                                        <div className={`flex items-center justify-between py-1 ${
                                                                             m?.winner_id && m.winner_id === m.participant2_id
-                                                                                ? 'bg-emerald-500/20 text-emerald-300 font-bold'
+                                                                                ? 'font-medium text-lime-300'
                                                                                 : 'text-slate-300'
                                                                         }`}>
                                                                             <span className="truncate max-w-[120px]">{m?.participant2_name || (node.is_bye ? 'BYE' : 'TBD')}</span>
@@ -814,7 +827,7 @@ export default function TournamentShow({ tournamentId }: Props) {
             <Modal
                 isOpen={showRegisterModal}
                 onClose={() => setShowRegisterModal(false)}
-                title={isTeamEntry ? 'Register a team' : 'Register'}
+                title={isTeamEntry ? 'Apply with your team' : 'Apply to compete'}
             >
                 <form onSubmit={handleRegister} className="space-y-4">
                     {registerError && (
@@ -823,6 +836,10 @@ export default function TournamentShow({ tournamentId }: Props) {
                             {registerError}
                         </div>
                     )}
+
+                    <p className="text-sm text-slate-300">
+                        This submits an application. An organizer still has to approve it before you are in the competition.
+                    </p>
 
                     {isTeamEntry && userTeams.length === 0 && (
                         <p className="text-sm text-slate-300">This competition takes a team. Create a team before registering.</p>
@@ -868,7 +885,7 @@ export default function TournamentShow({ tournamentId }: Props) {
                             Cancel
                         </Button>
                         <Button type="submit" variant="primary" disabled={registering || (isTeamEntry && !selectedTeamId)}>
-                            {registering ? 'Registering...' : 'Confirm Registration'}
+                            {registering ? 'Submitting...' : 'Submit application'}
                         </Button>
                     </div>
                 </form>

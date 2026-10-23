@@ -69,6 +69,7 @@ test('a player can post, like once, and comment, and a stranger cannot delete it
 
     $this->actingAs($this->sponsor, 'sanctum')
         ->postJson("/api/v1/posts/{$post->id}/comments", ['content' => 'See you there.'])
+        ->assertJsonMissingPath('data.user.email')
         ->assertCreated();
 
     $this->assertDatabaseCount('comments', 1);

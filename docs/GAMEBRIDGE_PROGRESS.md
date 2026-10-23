@@ -155,14 +155,68 @@ The new columns `posts.tournament_id` and `posts.sponsored` were applied inside 
 
 Browser: `/login` rendered the new header and footer. A login POST was started as `player@campusesports.et` and did not finish, because the PHP server could not complete a Postgres connection from the host. The composer, like, comment, and community message were not clicked. Nothing was committed or pushed.
 
+## Visual redesign, 2026-10-23
+
+This pass did not add product features. It changed the rendered shell.
+
+The host still cannot authenticate to the Docker Postgres on `127.0.0.1:5433` because that port is shared with a different local Postgres. A one-shot container, `gb_pg_bridge`, forwards `127.0.0.1:55432` to `postgres:5432` on the Docker network. The role password was not changed. No rows were deleted. The PHP server on `127.0.0.1:8000` uses that bridge.
+
+Shared surfaces are charcoal (`#141414`) in dark mode and warm paper in light mode. The accent stays `#A3E635`. Headings stay Space Grotesk and body text stays Inter; both resolved in the browser (`document.fonts.check` for Space Grotesk became true, and the computed heading family was Space Grotesk). Cards and dialogs no longer use blur, large radius, or drop shadows. Buttons are flat lime, slate, outline, or rose.
+
+What changed on the pages that were opened:
+
+- Competitions are a list, not a card grid. Each row shows the stored game name, status, start date, registration deadline, format, and entered count. Stored banner or icon URLs are used when present. These three events had none, so the rows are typographic. The first row is larger. The action label is View.
+- Tournament detail keeps the server registration state. Tabs use the lime accent. An empty bracket says no matches exist. Winner styling in a generated bracket is lime text, not a green box.
+- Teams and communities use the same list composition. Hawassa Green shows its tag, game, campus, apply form, and the real roster row. AAU Esports Club shows its description and member count.
+- The feed composer is a single column. The desktop sidebar lists published competitions already returned by the tournament API. It does not repeat the header. A personalized feed query was sending preferred game names into `posts.game_id`. Names are now resolved to ids, and a 500 no longer prints SQL in the composer. This account had no posts, so the empty state is what rendered.
+- The passport for HabeshaSniper shows the tag, campus, bio, follower count, entered count, and the AAU PUBG registration. It does not use statistic cards.
+- Organizer manage for tournament 3 uses the same type and status buttons. Facts are a list. Seeding shows the one entrant and a seed field. The old metric cards are gone.
+- Signed-in mobile navigation is icon plus label: Feed, Events, Clubs, Alerts, Profile.
+
+Browser, signed in, against the live database:
+
+- `/login` as HabeshaSniper, then `/tournaments`, `/tournaments/3`, `/feed`, `/teams`, `/teams/3` (Hawassa Green), `/communities`, `/communities/1`, `/players/HabeshaSniper`.
+- Light theme on `/tournaments` set `localStorage.theme` to `light`, removed `dark`, and painted the body `rgb(246, 243, 236)`. It was switched back to dark before the organizer check.
+- Organizer login as TournamentDirector, then `/tournaments/3/manage`. Status controls and the seeding tab rendered. No status was changed.
+- AAU Esports Club still tells a non-member, including this organizer, to join before reading channels. That message is now in the conversation column as well as the channel list. Nobody was joined, so no channel transcript was opened.
+- Measured layout widths with no horizontal overflow: 390, 960 (a 768 request landed here), 1025, and 1800 (a 1440 request landed here). The screenshot pane is 860px wide, so wide layouts are cropped on the right in the captures. The 390 and light-mode captures show the full column.
+
+`npx tsc --noEmit` exit 0. `npm run build` exit 0. `php vendor/bin/pint --dirty` passed. With `DB_*` cleared so Pest uses sqlite: `SocialPlatformTest` and `PlayerDashboardAndPassportTest` together, **8 passed, 76 assertions**.
+
+## Social layout, Discord communities, and registration approval, 2026-10-23
+
+Desktop navigation is a left rail. The horizontal desktop bar is gone. The rail has GameBridge, Feed, Competitions, Communities, Teams, Notifications, Profile, then Rankings, Venues, Learning, Messages, and Tickets. There is no Discover route, so none was added. Theme and the signed-in account sit at the bottom of the rail. Mobile keeps a separate header and a bottom bar: Feed, Events, Clubs, Teams, and Profile. Guests get Home and Sign in in those end slots. The secondary menu holds the rest.
+
+The feed is a central column with the current player's picture, a text composer, an image field, a tournament link, and a publish button. Posts show an avatar or a letter fallback, the handle, the time, the text, and like, comment, and copy-link actions. An image can be opened larger. Older posts load from the existing paginated API. Counts come from stored reactions and comments.
+
+Communities use a server rail, a channel column, and a conversation column inside the page. On a phone the channel list is the first screen and the conversation replaces it, with a way back. A non-member sees the join gate and does not see the channel-creation form. Messages still refresh about every 8 seconds. There is no WebSocket delivery, unread count, typing indicator, or online list.
+
+Registration is pending unless the tournament setting `auto_approve` is explicitly true. The public button says Apply to compete, or Apply with your team. Pending, approved, and rejected copy is distinct. Check-in and seeding only accept approved rows. Pending applications still reserve a place at apply time. Approval locks the tournament, counts approved rows only, and rechecks eligibility, so two approvals cannot pass capacity. Organizer manage has an Applications tab with approve and reject. Existing approved rows were left approved.
+
+Profile pictures upload through `POST /api/v1/profile/avatar`. The server requires a real image, jpg, png, or webp, at most 2 MB, and stores it on the public disk. `php artisan storage:link` was run because `public/storage` was missing. Avatars render in the rail, composer, posts, comments, passport, profile, team roster, and chat, with a letter fallback when the file is missing. Comment JSON no longer includes the author's email or phone.
+
+Browser, signed in as TournamentDirector, against Docker Postgres through `gb_pg_bridge` on `127.0.0.1:55432`:
+
+- `/feed` showed the left rail in dark and light themes. A text post was published and persisted: "Scrim notes from the campus lab. Looking for a PUBG Mobile duo before Saturday." Like moved the count from 0 to 1 and unlike returned it to 0. A comment, "I can play Saturday evening.", was saved and shown. `/posts/1` opened that post.
+- `/tournaments/1` showed Apply to compete, the rules, the deadline, and 6 approved entrants of 32. No application was submitted.
+- `/tournaments/1/manage` showed Applications (0 pending) and Seeding (6). The six existing approved players stayed approved. No approve, reject, or status button was clicked.
+- `/communities/1` showed the server chip, channel column, and conversation column. The non-member message remained. Nobody was joined, so no channel transcript was opened and no message was sent.
+- `/profile` showed the letter avatar and Change profile picture. No file was uploaded in the browser.
+- Theme toggle stored `dark` and painted the body `rgb(20, 20, 20)` with light text. Light mode earlier in the same check used the warm paper surface and dark text.
+- No horizontal overflow at a 390 viewport on the profile page after the long gamer tag was allowed to wrap. A 768 request measured 941px wide, a 1024 request measured 1261px, and a 1440 request measured 1781px. Scroll width matched client width at each of those. The screenshot pane still crops the right side of wide pages. No HTTP 500 appeared in the PHP server log for these requests.
+
+SQLite Pest, with `DB_*` cleared: `RegistrationReviewTest`, `CompetitionJourneyTest`, `ProductionCriticalFlowsTest`, `SocialPlatformTest`, and `PlayerDashboardAndPassportTest` together, **22 passed, 188 assertions**. A later social run after the comment resource, `SocialPlatformTest` and `SocialInteractionsTest`, **11 passed, 60 assertions**. `npx tsc --noEmit` exit 0. `npm run build` exit 0. `php vendor/bin/pint --dirty` passed.
+
 ## Next
 
-- Generate a bracket only when an event has enough real entrants, then confirm a result in the browser and open that player's passport.
-- The organizer manage page body still uses the older panel layout. Venues, tickets, scanner, rankings, and sponsorship were not redesigned in this pass.
-- Video posts, WebSocket delivery, unread badges, and typing presence are not implemented. Messages refresh on an 8 second poll.
-- Feed, community chat, and follow were not clicked in the browser. Widths 360, 768, 1024, and 1440 were not measured in this pass.
-- Kilo Rifles still has no roster rows, so it can show 0 players. THE OZES has a pre-existing pending join request that was not reviewed in the browser.
-- Tablet and wide-desktop layouts were not measured separately. The 390×844 check used device emulation and was cleared afterward.
+- Venues, tickets, scanner, rankings, education, and sponsorship still use the older panels, gradients, and cyan accents.
+- Tournament create and match-detail dialogs still have some rounded emerald boxes.
+- No stored game artwork, so competition rows cannot be image-led until banners exist.
+- An image was not attached in the browser. The composer accepts an image, and the server already validates image uploads, but no image post was clicked.
+- Community chat was not opened. Joining AAU Esports Club would create a membership, and that was not done.
+- A live tournament application was not submitted or approved. The pending-to-approved path was proven in Pest, and the live manage screen was only read.
+- Kilo Rifles still has no roster rows. THE OZES still has a pre-existing pending join request.
+- Video posts, WebSocket delivery, unread badges, and typing presence are not implemented.
 - Do not enable live payment providers.
 
 ## Not done

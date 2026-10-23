@@ -2,16 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { AppLayout } from '../../layouts/AppLayout';
 import { Button } from '../../components/ui/Button';
-import { Card, CardBody } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
 import {
-    Globe,
-    Users,
     Plus,
     Search,
     Lock,
-    ShieldCheck,
-    CheckCircle,
 } from 'lucide-react';
 
 interface CommunityItem {
@@ -116,12 +110,9 @@ export default function CommunitiesIndex() {
             <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
                     <div>
-                        <h1 className="text-2xl font-black text-white flex items-center gap-2">
-                            <Globe className="w-6 h-6 text-cyan-400" />
-                            Campus & Game Hubs
-                        </h1>
-                        <p className="text-sm text-slate-400">
-                            Join campus gaming clubs, game guilds, city LAN groups, and creator fanbases.
+                        <h1 className="font-display text-4xl text-white">Communities</h1>
+                        <p className="mt-2 text-sm text-slate-400">
+                            Campus clubs, game groups, and city communities that already exist on GameBridge.
                         </p>
                     </div>
 
@@ -146,14 +137,14 @@ export default function CommunitiesIndex() {
                             onChange={(e) => setSearch(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && fetchCommunities()}
                             placeholder="Search communities by name..."
-                            className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                            className="min-h-11 w-full border border-slate-700 bg-transparent pl-9 pr-4 text-sm text-white placeholder:text-slate-500 focus:border-lime-300 focus:outline-none"
                         />
                     </div>
 
                     <select
                         value={typeFilter}
                         onChange={(e) => setTypeFilter(e.target.value)}
-                        className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-cyan-500"
+                        className="min-h-11 border border-slate-700 bg-transparent px-3 text-sm text-slate-200 focus:border-lime-300 focus:outline-none"
                     >
                         <option value="">All Hub Types</option>
                         <option value="school">Campus / University</option>
@@ -173,84 +164,50 @@ export default function CommunitiesIndex() {
                 {loading ? (
                     <div className="py-12 text-center text-slate-500 text-sm">Loading communities...</div>
                 ) : communities.length === 0 ? (
-                    <div className="py-16 text-center border border-slate-800/80 rounded-xl bg-slate-900/30">
-                        <Globe className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-                        <h3 className="text-base font-bold text-slate-200">No communities found</h3>
-                        <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                            Start the first gaming club for your university or favorite esports title!
-                        </p>
+                    <div className="border-y border-slate-800 py-10">
+                        <h2 className="text-base text-white">No communities match this view</h2>
+                        <p className="mt-2 max-w-lg text-sm text-slate-400">Nothing in the directory matches these filters.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <ul className="divide-y divide-slate-800 border-y border-slate-800">
                         {communities.map((c) => (
-                            <Card key={c.id} className="border border-slate-800 bg-slate-900/70 hover:border-slate-700 transition-all flex flex-col justify-between">
-                                <CardBody className="p-5 space-y-4">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center font-bold text-white text-base">
-                                            {c.name.substring(0, 2).toUpperCase()}
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                            <Badge variant="outline" className="text-[10px] capitalize">
-                                                {c.type}
-                                            </Badge>
-                                            {c.visibility !== 'public' && (
-                                                <span title={c.visibility}>
-                                                    <Lock className="w-3.5 h-3.5 text-slate-400" />
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <Link href={`/communities/${c.id}`} className="block group">
-                                            <h3 className="font-bold text-base text-white group-hover:text-cyan-400 transition-colors">
-                                                {c.name}
-                                            </h3>
-                                        </Link>
-                                        <p className="text-xs text-slate-400 mt-1.5 line-clamp-2">
-                                            {c.description || 'No description provided.'}
-                                        </p>
-                                    </div>
-
-                                    <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-                                        <span className="flex items-center gap-1 font-semibold text-slate-300">
-                                            <Users className="w-3.5 h-3.5 text-cyan-400" />
-                                            {c.members_count} members
-                                        </span>
-
-                                        {c.is_member ? (
-                                            <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                                                <CheckCircle className="w-3.5 h-3.5" /> Joined
-                                            </span>
-                                        ) : c.membership_status === 'pending' ? (
-                                            <span className="text-amber-400 text-xs">Pending Approval</span>
-                                        ) : (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => handleJoin(c.id)}
-                                                className="text-xs py-1 px-3"
-                                            >
-                                                {c.visibility === 'public' ? 'Join Hub' : 'Request'}
-                                            </Button>
-                                        )}
-                                    </div>
-                                </CardBody>
-                            </Card>
+                            <li key={c.id} className="grid gap-3 py-5 sm:grid-cols-[8rem_1fr_auto] sm:items-center">
+                                <p className="font-display text-sm text-lime-300">
+                                    {c.type}
+                                    {c.visibility !== 'public' && (
+                                        <Lock className="ml-2 inline h-3.5 w-3.5 text-slate-400" aria-label={c.visibility} />
+                                    )}
+                                </p>
+                                <div>
+                                    <Link href={`/communities/${c.id}`}>
+                                        <h2 className="font-display text-2xl text-white">{c.name}</h2>
+                                    </Link>
+                                    <p className="mt-1 text-sm text-slate-400">
+                                        {c.description || 'No description yet.'} · {c.members_count} members
+                                    </p>
+                                </div>
+                                {c.is_member ? (
+                                    <span className="text-sm text-lime-300">Joined</span>
+                                ) : c.membership_status === 'pending' ? (
+                                    <span className="text-sm text-amber-200">Pending</span>
+                                ) : (
+                                    <Button variant="outline" size="sm" onClick={() => handleJoin(c.id)}>
+                                        {c.visibility === 'public' ? 'Join' : 'Request'}
+                                    </Button>
+                                )}
+                            </li>
                         ))}
-                    </div>
+                    </ul>
                 )}
             </div>
 
             {/* Modal */}
             {showCreateModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-                    <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 space-y-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+                    <div className="w-full max-w-md space-y-4 border border-slate-800 bg-slate-950 p-6">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                                <Globe className="w-5 h-5 text-cyan-400" /> Start a Campus Hub
-                            </h3>
-                            <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-white">✕</button>
+                            <h3 className="font-display text-lg text-white">Start a community</h3>
+                            <button type="button" onClick={() => setShowCreateModal(false)} className="min-h-11 text-sm text-slate-400 hover:text-white">Close</button>
                         </div>
 
                         <form onSubmit={handleCreateCommunity} className="space-y-3">

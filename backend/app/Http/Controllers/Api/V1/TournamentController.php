@@ -7,10 +7,12 @@ use App\Domain\Tournaments\Actions\CheckInTournamentAction;
 use App\Domain\Tournaments\Actions\CreateTournamentAction;
 use App\Domain\Tournaments\Actions\GenerateBracketAction;
 use App\Domain\Tournaments\Actions\RegisterTournamentAction;
+use App\Domain\Tournaments\Actions\ReviewTournamentRegistrationAction;
 use App\Domain\Tournaments\Actions\UpdateSeedingAction;
 use App\Domain\Tournaments\Actions\UpdateTournamentAction;
 use App\Domain\Tournaments\Actions\UpdateTournamentStatusAction;
 use App\Domain\Tournaments\Models\Tournament;
+use App\Domain\Tournaments\Models\TournamentRegistration;
 use App\Domain\Tournaments\Services\StandingsService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tournament\AssignStaffRequest;
@@ -172,7 +174,9 @@ class TournamentController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Registration successful.',
+            'message' => $registration->status === 'approved'
+                ? 'Registration approved.'
+                : 'Application submitted. An organizer still has to approve it.',
             'data' => new TournamentRegistrationResource($registration),
         ], 201);
     }
@@ -183,12 +187,38 @@ class TournamentController extends Controller
 
         $registrations = $tournament->registrations()
             ->with(['user.profile', 'team'])
+            ->when(Gate::forUser($request->user())->denies('update', $tournament), function ($query) {
+                $query->where('status', 'approved');
+            })
             ->orderByRaw('CASE WHEN seed IS NULL THEN 1 ELSE 0 END, seed ASC')
             ->get();
 
         return response()->json([
             'success' => true,
             'data' => TournamentRegistrationResource::collection($registrations),
+        ]);
+    }
+
+    public function reviewRegistration(
+        Request $request,
+        Tournament $tournament,
+        TournamentRegistration $registration,
+        ReviewTournamentRegistrationAction $action
+    ): JsonResponse {
+        if ($registration->tournament_id !== $tournament->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'decision' => ['required', 'in:approved,rejected'],
+        ]);
+
+        $updated = $action->execute($request->user(), $registration, $validated['decision']);
+
+        return response()->json([
+            'success' => true,
+            'message' => $updated->status === 'approved' ? 'Application approved.' : 'Application rejected.',
+            'data' => new TournamentRegistrationResource($updated),
         ]);
     }
 

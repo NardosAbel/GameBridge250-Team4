@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { AppLayout } from '../../layouts/AppLayout';
-import { Badge } from '../../components/ui/Badge';
+import { Avatar } from '../../components/ui/Avatar';
 
 interface PassportPageProps {
     player: {
         id?: number;
         name?: string;
         gamer_tag: string;
+        avatar_url?: string | null;
         university?: string;
         bio?: string;
         student_verified: boolean;
@@ -55,21 +56,34 @@ export default function Passport({ player, passport, social }: PassportPageProps
     return (
         <AppLayout>
             <Head title={`${player.gamer_tag} | Player Passport`} />
-            <div className="max-w-3xl mx-auto px-4 py-10 space-y-8">
-                <header className="space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                        <h1 className="font-display text-3xl text-white">{player.gamer_tag}</h1>
-                        {player.student_verified && <Badge variant="success">Verified student</Badge>}
+            <div className="mx-auto max-w-3xl space-y-10 px-4 py-8">
+                <header className="border-b border-slate-800 pb-6">
+                    <div className="flex items-end justify-between gap-4">
+                        <div className="flex min-w-0 items-center gap-4">
+                            <Avatar name={player.gamer_tag} src={player.avatar_url} size="lg" />
+                            <div className="min-w-0">
+                            <h1 className="break-words font-display text-3xl text-white sm:text-5xl">{player.gamer_tag}</h1>
+                            <p className="mt-2 text-sm text-slate-300">
+                                {player.name}
+                                {player.university ? ` · ${player.university}` : ''}
+                                {player.student_verified ? ' · Verified student' : ''}
+                            </p>
+                            </div>
+                        </div>
+                        {auth.user && player.id && auth.user.id !== player.id && (
+                            <button type="button" onClick={toggleFollow} className="min-h-11 shrink-0 bg-lime-300 px-4 text-sm font-medium text-slate-950">
+                                {following ? 'Following' : 'Follow'}
+                            </button>
+                        )}
                     </div>
-                    <p className="text-sm text-slate-300">{player.name}{player.university ? ` · ${player.university}` : ''}</p>
-                    {player.bio && <p className="text-sm text-slate-400">{player.bio}</p>}
-                    <p className="text-sm text-slate-400">{followers} followers</p>
-                    {auth.user && player.id && auth.user.id !== player.id && (
-                        <button type="button" onClick={toggleFollow} className="min-h-11 border border-lime-300 px-4 text-sm text-lime-300">
-                            {following ? 'Following' : 'Follow'}
-                        </button>
-                    )}
-                    {followError && <p className="text-sm text-rose-300" role="alert">{followError}</p>}
+                    {player.bio && <p className="mt-4 max-w-2xl text-sm leading-relaxed text-slate-300">{player.bio}</p>}
+                    <p className="mt-4 text-sm text-slate-400">
+                        {followers} followers
+                        {` · ${passport.tournament_count} entered`}
+                        {` · ${passport.verified_result_count} confirmed results`}
+                        {passport.rating !== null ? ` · rating ${passport.rating}` : ''}
+                    </p>
+                    {followError && <p className="mt-2 text-sm text-rose-300" role="alert">{followError}</p>}
                 </header>
 
                 {social && (
@@ -89,21 +103,6 @@ export default function Passport({ player, passport, social }: PassportPageProps
                         )}
                     </section>
                 )}
-
-                <dl className="grid grid-cols-3 gap-4 border-y border-slate-800 py-4 text-sm">
-                    <div>
-                        <dt className="text-slate-500">Entered</dt>
-                        <dd className="mt-1 text-lg text-white">{passport.tournament_count}</dd>
-                    </div>
-                    <div>
-                        <dt className="text-slate-500">Confirmed results</dt>
-                        <dd className="mt-1 text-lg text-white">{passport.verified_result_count}</dd>
-                    </div>
-                    <div>
-                        <dt className="text-slate-500">Rating</dt>
-                        <dd className="mt-1 text-lg text-white">{passport.rating ?? '—'}</dd>
-                    </div>
-                </dl>
 
                 <section>
                     <h2 className="text-base font-semibold text-white">Recorded results</h2>

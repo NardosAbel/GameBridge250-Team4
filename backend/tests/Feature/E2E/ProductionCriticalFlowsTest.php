@@ -136,12 +136,19 @@ test('e2e: tournament registration and check-in ready flow', function () {
     $regResponse = $this->actingAs($this->player1, 'sanctum')
         ->postJson("/api/v1/tournaments/{$tournament->id}/register");
 
-    $regResponse->assertStatus(201);
+    $regResponse->assertStatus(201)->assertJsonPath('data.status', 'pending');
 
     $this->assertDatabaseHas('tournament_registrations', [
         'tournament_id' => $tournament->id,
         'user_id' => $this->player1->id,
+        'status' => 'pending',
     ]);
+
+    $this->actingAs($this->organizer, 'sanctum')
+        ->postJson("/api/v1/tournaments/{$tournament->id}/registrations/{$regResponse->json('data.id')}/review", [
+            'decision' => 'approved',
+        ])
+        ->assertOk();
 
     // 2. Tournament enters check-in window
     $tournament->update(['status' => 'check_in']);

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { AppLayout } from '../../layouts/AppLayout';
+import { Avatar } from '../../components/ui/Avatar';
 
 interface Channel {
     id: number;
     name: string;
+    description?: string | null;
     community_id?: number;
 }
 
@@ -12,19 +14,33 @@ interface Message {
     id: number;
     message: string;
     created_at: string;
-    user?: { id: number; name: string };
+    user?: { id: number; name: string; handle?: string | null; avatar_url?: string | null };
+}
+
+interface ServerChip {
+    id: number;
+    name: string;
+    avatar_url?: string | null;
 }
 
 function csrfToken(): string {
     return (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content ?? '';
 }
 
+function clock(iso: string): string {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
 export default function CommunityShow({ communityId }: { communityId: number }) {
     const { auth } = usePage<{ auth: { user: { id: number } | null } }>().props;
     const [community, setCommunity] = useState<any>(null);
+    const [servers, setServers] = useState<ServerChip[]>([]);
     const [error, setError] = useState('');
     const [channels, setChannels] = useState<Channel[]>([]);
     const [channelError, setChannelError] = useState('');
+    const [messageError, setMessageError] = useState('');
     const [active, setActive] = useState<Channel | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [draft, setDraft] = useState('');
@@ -49,6 +65,7 @@ export default function CommunityShow({ communityId }: { communityId: number }) 
         if (res.status === 403) {
             setChannelError(body.message || 'Join this community to read its channels.');
             setChannels([]);
+            setActive(null);
             return;
         }
         if (!res.ok) {
@@ -63,6 +80,13 @@ export default function CommunityShow({ communityId }: { communityId: number }) 
     useEffect(() => {
         loadCommunity().catch(() => setError('This community is not available.'));
         if (auth.user) loadChannels().catch(() => setChannelError('Channels could not be loaded.'));
+        fetch('/api/v1/communities', { headers: { Accept: 'application/json' } })
+            .then((res) => res.json())
+            .then((body) => {
+                const rows = Array.isArray(body.data) ? body.data : (body.data?.data ?? []);
+                setServers(rows.slice(0, 12));
+            })
+            .catch(() => setServers([]));
     }, [communityId]);
 
     useEffect(() => {
@@ -71,7 +95,13 @@ export default function CommunityShow({ communityId }: { communityId: number }) 
         const loadMessages = async () => {
             const res = await fetch(`/api/v1/chat/channels/${active.id}/messages`, { headers: { Accept: 'application/json' } });
             const body = await res.json();
-            if (!cancelled && res.ok) setMessages(body.data ?? []);
+            if (cancelled) return;
+            if (!res.ok) {
+                setMessageError(body.message || 'Messages could not be loaded.');
+                return;
+            }
+            setMessageError('');
+            setMessages(body.data ?? []);
         };
         loadMessages();
         const timer = window.setInterval(loadMessages, 8000);
@@ -101,6 +131,7 @@ export default function CommunityShow({ communityId }: { communityId: number }) 
         event.preventDefault();
         if (!active || !draft.trim()) return;
         setSending(true);
+        setMessageError('');
         const res = await fetch(`/api/v1/chat/channels/${active.id}/messages`, {
             method: 'POST',
             headers: {
@@ -113,11 +144,11 @@ export default function CommunityShow({ communityId }: { communityId: number }) 
         const body = await res.json();
         setSending(false);
         if (!res.ok) {
-            setChannelError(body.message || 'Message was not sent.');
+            setMessageError(body.message || 'Message was not sent.');
             return;
         }
         setDraft('');
-        setMessages((current) => [...current, body.data]);
+        setMessages((current) => (current.some((message) => message.id === body.data.id) ? current : [...current, body.data]));
     };
 
     const addChannel = async (event: React.FormEvent) => {
@@ -149,29 +180,38 @@ export default function CommunityShow({ communityId }: { communityId: number }) 
     return (
         <AppLayout>
             <Head title={community?.name ?? 'Community'} />
-            <div className="mx-auto max-w-6xl px-4 py-6">
-                <Link href="/communities" className="text-sm text-lime-300 hover:underline">Communities</Link>
-                {error && <p className="mt-4 text-sm text-rose-300" role="alert">{error}</p>}
+            <div className="flex min-h-[calc(100dvh-3.5rem)] md:min-h-[calc(100dvh-1px)]">
+                <nav aria-label="Communities" className="hidden w-16 shrink-0 flex-col items-center gap-2 border-r border-slate-800 py-3 md:flex">
+                    {servers.map((server) => (
+                        <Link
+                            key={server.id}
+                            href={`/communities/${server.id}`}
+                            title={server.name}
+                            className={`flex h-11 w-11 items-center justify-center border ${server.id === Number(communityId) ? 'border-lime-300' : 'border-transparent'}`}
+                        >
+                            <Avatar name={server.name} src={server.avatar_url} size="md" />
+                        </Link>
+                    ))}
+                    <Link href="/communities" className="mt-2 text-center text-[10px] text-slate-400 hover:text-white">All</Link>
+                </nav>
+
                 {community && (
                     <>
-                        <header className="mt-4 flex flex-wrap items-end justify-between gap-4 border-b border-slate-800 pb-4">
-                            <div>
-                                <h1 className="font-display text-3xl text-white">{community.name}</h1>
-                                <p className="mt-2 max-w-2xl text-sm text-slate-400">{community.description || 'A GameBridge community.'}</p>
-                                <p className="mt-2 text-xs text-slate-500">{community.members_count} members · {community.visibility}</p>
+                        <aside className={`${showChannels ? 'flex' : 'hidden'} min-w-0 flex-1 flex-col border-slate-800 md:flex md:w-60 md:flex-none md:border-r`}>
+                            <div className="border-b border-slate-800 px-4 py-4">
+                                <Link href="/communities" className="text-xs text-lime-300 md:hidden">Communities</Link>
+                                <h1 className="font-display text-xl text-white">{community.name}</h1>
+                                <p className="mt-1 text-xs text-slate-400">{community.members_count} {Number(community.members_count) === 1 ? 'member' : 'members'} · {community.visibility}</p>
+                                {auth.user && !community.is_member && (
+                                    <button type="button" onClick={join} disabled={joining} className="mt-3 min-h-11 bg-lime-300 px-3 text-sm font-medium text-slate-950">
+                                        {joining ? 'Joining…' : community.visibility === 'public' ? 'Join' : 'Request to join'}
+                                    </button>
+                                )}
                             </div>
-                            {auth.user && !community.is_member && (
-                                <button type="button" onClick={join} disabled={joining} className="min-h-11 bg-lime-300 px-4 text-sm font-medium text-slate-950">
-                                    {joining ? 'Joining…' : community.visibility === 'public' ? 'Join' : 'Request to join'}
-                                </button>
-                            )}
-                        </header>
-
-                        <div className="mt-4 grid min-h-[28rem] md:grid-cols-[14rem_minmax(0,1fr)]">
-                            <div className={`${showChannels ? 'block' : 'hidden'} border-slate-800 md:block md:border-r md:pr-4`}>
-                                <h2 className="text-sm text-slate-400">Channels</h2>
-                                {channelError && <p className="mt-3 text-sm text-slate-400">{channelError}</p>}
-                                <ul className="mt-3">
+                            <div className="flex-1 overflow-y-auto px-3 py-3">
+                                <p className="px-2 text-xs text-slate-500">Text channels</p>
+                                {channelError && <p className="mt-3 px-2 text-sm text-slate-400" role="status">{channelError}</p>}
+                                <ul className="mt-2">
                                     {channels.map((channel) => (
                                         <li key={channel.id}>
                                             <button
@@ -180,15 +220,16 @@ export default function CommunityShow({ communityId }: { communityId: number }) 
                                                     setActive(channel);
                                                     setShowChannels(false);
                                                 }}
-                                                className={`block min-h-11 w-full text-left text-sm ${active?.id === channel.id ? 'text-lime-300' : 'text-slate-200'}`}
+                                                className={`block min-h-11 w-full px-2 text-left text-sm ${active?.id === channel.id ? 'bg-slate-900 text-lime-300' : 'text-slate-200'}`}
                                             >
-                                                {channel.name}
+                                                # {channel.name}
                                             </button>
                                         </li>
                                     ))}
                                 </ul>
-                                {community.can_manage && (
-                                    <form onSubmit={addChannel} className="mt-4 space-y-2">
+                                {channels.length === 0 && !channelError && <p className="px-2 text-sm text-slate-500">No channels yet.</p>}
+                                {community.can_manage && community.is_member && (
+                                    <form onSubmit={addChannel} className="mt-4 space-y-2 px-2">
                                         <label htmlFor="channel-name" className="text-xs text-slate-500">New channel</label>
                                         <input
                                             id="channel-name"
@@ -201,39 +242,56 @@ export default function CommunityShow({ communityId }: { communityId: number }) 
                                     </form>
                                 )}
                             </div>
-                            <section className={`${showChannels ? 'hidden' : 'flex'} min-h-[24rem] flex-col md:flex`}>
-                                <button type="button" className="mb-2 min-h-11 text-left text-sm text-lime-300 md:hidden" onClick={() => setShowChannels(true)}>
+                        </aside>
+
+                        <section className={`${showChannels ? 'hidden' : 'flex'} min-w-0 flex-1 flex-col md:flex`}>
+                            <header className="flex items-center gap-3 border-b border-slate-800 px-4 py-3">
+                                <button type="button" className="min-h-11 text-sm text-lime-300 md:hidden" onClick={() => setShowChannels(true)}>
                                     Channels
                                 </button>
-                                <h2 className="font-display text-xl text-white">{active?.name ?? 'Conversation'}</h2>
-                                <div className="mt-4 flex-1 space-y-3 overflow-y-auto">
-                                    {messages.map((message) => (
-                                        <p key={message.id} className="text-sm">
-                                            <span className="text-slate-400">{message.user?.name ?? 'Player'}</span>
-                                            <span className="text-slate-600"> · {new Date(message.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
-                                            <span className="mt-1 block text-slate-100">{message.message}</span>
-                                        </p>
-                                    ))}
-                                    {active && messages.length === 0 && <p className="text-sm text-slate-500">No messages in this channel yet.</p>}
+                                <div>
+                                    <h2 className="font-display text-lg text-white">{active ? `# ${active.name}` : 'Conversation'}</h2>
+                                    {community.description && <p className="text-xs text-slate-400">{community.description}</p>}
                                 </div>
-                                {active && (
-                                    <form onSubmit={send} className="mt-4 flex gap-2">
-                                        <label htmlFor="message" className="sr-only">Message</label>
-                                        <input
-                                            id="message"
-                                            value={draft}
-                                            onChange={(event) => setDraft(event.target.value)}
-                                            className="min-h-11 flex-1 border border-slate-700 bg-transparent px-3 text-sm"
-                                        />
-                                        <button type="submit" disabled={sending} className="min-h-11 bg-lime-300 px-4 text-sm text-slate-950">
-                                            {sending ? 'Sending…' : 'Send'}
-                                        </button>
-                                    </form>
+                            </header>
+                            <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
+                                {messageError && <p className="text-sm text-rose-300" role="alert">{messageError}</p>}
+                                {messages.map((message) => (
+                                    <article key={message.id} className="flex gap-3">
+                                        <Avatar name={message.user?.handle || message.user?.name || 'Player'} src={message.user?.avatar_url} size="sm" />
+                                        <div>
+                                            <p className="text-sm">
+                                                <span className="text-white">{message.user?.handle || message.user?.name || 'Player'}</span>
+                                                <span className="ml-2 text-xs text-slate-500">{clock(message.created_at)}</span>
+                                            </p>
+                                            <p className="mt-1 whitespace-pre-wrap text-sm text-slate-100">{message.message}</p>
+                                        </div>
+                                    </article>
+                                ))}
+                                {active && messages.length === 0 && !messageError && (
+                                    <p className="text-sm text-slate-500">No messages in this channel yet.</p>
                                 )}
-                            </section>
-                        </div>
+                                {!active && !channelError && <p className="text-sm text-slate-500">Choose a channel.</p>}
+                            </div>
+                            {active && (
+                                <form onSubmit={send} className="flex gap-2 border-t border-slate-800 px-4 py-3">
+                                    <label htmlFor="message" className="sr-only">Message</label>
+                                    <input
+                                        id="message"
+                                        value={draft}
+                                        onChange={(event) => setDraft(event.target.value)}
+                                        placeholder={`Message #${active.name}`}
+                                        className="min-h-11 flex-1 border border-slate-700 bg-transparent px-3 text-sm"
+                                    />
+                                    <button type="submit" disabled={sending} className="min-h-11 bg-lime-300 px-4 text-sm text-slate-950">
+                                        {sending ? 'Sending…' : 'Send'}
+                                    </button>
+                                </form>
+                            )}
+                        </section>
                     </>
                 )}
+                {error && !community && <p className="px-4 py-16 text-sm text-rose-300" role="alert">{error}</p>}
             </div>
         </AppLayout>
     );

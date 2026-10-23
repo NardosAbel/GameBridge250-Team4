@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { AppLayout } from '../../layouts/AppLayout';
+import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 
 interface TeamMemberItem {
@@ -8,6 +9,7 @@ interface TeamMemberItem {
     user_id: number;
     name: string;
     handle?: string;
+    avatar_url?: string | null;
     role: string;
     joined_at: string;
 }
@@ -151,8 +153,8 @@ export default function TeamShow({ teamId }: { teamId: number }) {
             <Head title={`${team.name} — GameBridge`} />
             <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
                 <header className="border-b border-slate-800 pb-6">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-200/80">{team.tag}</p>
-                    <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">{team.name}</h1>
+                    <p className="font-display text-sm text-lime-300">{team.tag}</p>
+                    <h1 className="mt-2 font-display text-4xl text-white">{team.name}</h1>
                     <p className="mt-2 text-sm text-slate-300">
                         {team.game?.name ? `${team.game.name} · ` : ''}
                         {team.university || 'No campus listed'}
@@ -217,8 +219,11 @@ export default function TeamShow({ teamId }: { teamId: number }) {
                     ) : (
                         <ul className="mt-3 divide-y divide-slate-800 border-y border-slate-800">
                             {team.members.map((member) => (
-                                <li key={member.id} className="flex items-baseline justify-between gap-3 py-3 text-sm">
-                                    <span className="text-white">{member.handle || member.name}</span>
+                                <li key={member.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                                    <span className="flex items-center gap-3 text-white">
+                                        <Avatar name={member.handle || member.name} src={member.avatar_url} size="sm" />
+                                        {member.handle || member.name}
+                                    </span>
                                     <span className="capitalize text-slate-400">{member.role}</span>
                                 </li>
                             ))}

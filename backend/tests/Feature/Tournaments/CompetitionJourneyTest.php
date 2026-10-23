@@ -79,10 +79,37 @@ test('a player registers once, an official confirms the match, and the passport 
         ->assertStatus(422);
 
     expect(TournamentRegistration::where('tournament_id', $tournament->id)->where('user_id', $winner->id)->count())->toBe(1);
+    expect(TournamentRegistration::where('user_id', $winner->id)->value('status'))->toBe('pending');
 
     $this->actingAs($opponent, 'sanctum')
         ->postJson("/api/v1/tournaments/{$tournament->id}/register")
         ->assertCreated();
+
+    $this->actingAs($winner, 'sanctum')
+        ->getJson("/api/v1/tournaments/{$tournament->id}")
+        ->assertOk()
+        ->assertJsonPath('data.tournament.viewer_registration.status', 'pending');
+
+    $winnerRegistration = TournamentRegistration::where('user_id', $winner->id)->first();
+    $opponentRegistration = TournamentRegistration::where('user_id', $opponent->id)->first();
+
+    $this->actingAs($outsider, 'sanctum')
+        ->postJson("/api/v1/tournaments/{$tournament->id}/registrations/{$winnerRegistration->id}/review", [
+            'decision' => 'approved',
+        ])
+        ->assertForbidden();
+
+    $this->actingAs($this->organizer, 'sanctum')
+        ->postJson("/api/v1/tournaments/{$tournament->id}/registrations/{$winnerRegistration->id}/review", [
+            'decision' => 'approved',
+        ])
+        ->assertOk();
+
+    $this->actingAs($this->organizer, 'sanctum')
+        ->postJson("/api/v1/tournaments/{$tournament->id}/registrations/{$opponentRegistration->id}/review", [
+            'decision' => 'approved',
+        ])
+        ->assertOk();
 
     $this->actingAs($winner, 'sanctum')
         ->getJson("/api/v1/tournaments/{$tournament->id}")

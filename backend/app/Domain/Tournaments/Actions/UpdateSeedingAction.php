@@ -29,6 +29,7 @@ class UpdateSeedingAction
             foreach ($seedMappings as $regId => $seed) {
                 TournamentRegistration::where('tournament_id', $tournament->id)
                     ->where('id', $regId)
+                    ->where('status', 'approved')
                     ->update(['seed' => $seed]);
             }
 

@@ -39,6 +39,7 @@ class PlayerPassportController extends Controller
                 'id' => $profile->user_id,
                 'name' => $profile->user?->name,
                 'gamer_tag' => $profile->gamer_tag,
+                'avatar_url' => $profile->avatar_url,
                 'university' => $profile->university,
                 'bio' => $profile->bio,
                 'student_verified' => (bool) $profile->student_verified,

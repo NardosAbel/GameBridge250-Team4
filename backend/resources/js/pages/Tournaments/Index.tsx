@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { AppLayout } from '../../layouts/AppLayout';
 import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import {
@@ -15,6 +14,8 @@ interface Game {
     id: number;
     name: string;
     slug: string;
+    banner_url?: string | null;
+    icon_url?: string | null;
 }
 
 interface Tournament {
@@ -35,6 +36,7 @@ interface Tournament {
     status: string;
     participants_count: number;
     starts_at: string;
+    registration_end_at?: string | null;
     game: Game;
     banner_url?: string;
     organizer: {
@@ -155,16 +157,6 @@ export default function TournamentIndex() {
         }
     };
 
-    const getStatusVariant = (status: string): "neutral" | "success" | "warning" | "danger" | "info" => {
-        switch (status) {
-            case 'live': return 'danger';
-            case 'registration_open': return 'success';
-            case 'check_in': return 'warning';
-            case 'completed': return 'neutral';
-            default: return 'info';
-        }
-    };
-
     const formatLabel = (format: string) => {
         switch (format) {
             case 'single_elimination': return 'Single Elimination';
@@ -176,6 +168,13 @@ export default function TournamentIndex() {
         }
     };
 
+    const when = (iso?: string | null) => {
+        if (!iso) return '';
+        const date = new Date(iso);
+        if (Number.isNaN(date.getTime())) return '';
+        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    };
+
     return (
         <AppLayout>
             <Head title="Tournaments — Campus Esports Ethiopia" />
@@ -184,7 +183,7 @@ export default function TournamentIndex() {
                 {/* Hero Header */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-slate-800 pb-6">
                     <div className="max-w-2xl">
-                        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
+                        <h1 className="font-display text-4xl text-white sm:text-5xl">
                             Competitions
                         </h1>
                         <p className="mt-2 text-sm sm:text-base text-slate-300 leading-relaxed">
@@ -205,8 +204,8 @@ export default function TournamentIndex() {
                 </div>
 
                 {/* Filters & Search */}
-                <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 sm:p-6 backdrop-blur-md space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                         {/* Search Input */}
                         <div className="relative">
                             <Search className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
@@ -215,7 +214,7 @@ export default function TournamentIndex() {
                                 placeholder="Search tournaments..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500"
+                                className="min-h-11 w-full border border-slate-700 bg-transparent pl-9 pr-3 text-sm text-white focus:border-lime-300 focus:outline-none"
                             />
                         </div>
 
@@ -223,7 +222,7 @@ export default function TournamentIndex() {
                         <select
                             value={selectedGame}
                             onChange={(e) => setSelectedGame(e.target.value)}
-                            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-300 text-sm focus:outline-none focus:border-emerald-500"
+                            className="min-h-11 border border-slate-700 bg-transparent px-3 text-sm text-slate-200 focus:border-lime-300 focus:outline-none"
                         >
                             <option value="">All Games</option>
                             {games.map(g => (
@@ -235,7 +234,7 @@ export default function TournamentIndex() {
                         <select
                             value={selectedFormat}
                             onChange={(e) => setSelectedFormat(e.target.value)}
-                            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-300 text-sm focus:outline-none focus:border-emerald-500"
+                            className="min-h-11 border border-slate-700 bg-transparent px-3 text-sm text-slate-200 focus:border-lime-300 focus:outline-none"
                         >
                             <option value="">All Formats</option>
                             <option value="single_elimination">Single Elimination</option>
@@ -249,7 +248,7 @@ export default function TournamentIndex() {
                         <select
                             value={selectedStatus}
                             onChange={(e) => setSelectedStatus(e.target.value)}
-                            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-300 text-sm focus:outline-none focus:border-emerald-500"
+                            className="min-h-11 border border-slate-700 bg-transparent px-3 text-sm text-slate-200 focus:border-lime-300 focus:outline-none"
                         >
                             <option value="">All Statuses</option>
                             <option value="registration_open">Registration Open</option>
@@ -262,11 +261,11 @@ export default function TournamentIndex() {
 
                 {/* Tournament Grid */}
                 {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[1, 2, 3, 4, 5, 6].map(i => (
-                            <div key={i} className="h-72 bg-slate-900/40 rounded-2xl animate-pulse border border-slate-800" />
+                    <ul className="divide-y divide-slate-800 border-y border-slate-800" aria-hidden="true">
+                        {[1, 2, 3].map((i) => (
+                            <li key={i} className="h-24 animate-pulse bg-slate-900/40" />
                         ))}
-                    </div>
+                    </ul>
                 ) : tournaments.length === 0 ? (
                     <div className="py-12 border border-slate-800 px-6">
                         <h2 className="text-lg font-semibold text-white">No competitions match this view</h2>
@@ -283,39 +282,45 @@ export default function TournamentIndex() {
                     </div>
                 ) : (
                     <ul className="divide-y divide-slate-800 border-y border-slate-800">
-                        {tournaments.map((t) => (
-                            <li key={t.id}>
-                                <Link href={`/tournaments/${t.id}`} className="grid gap-3 py-5 sm:grid-cols-[1fr_auto] sm:items-center hover:bg-slate-900/40 px-1">
-                                    <div>
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <h2 className="text-base font-semibold text-white">{t.title}</h2>
-                                            <Badge variant={getStatusVariant(t.status)}>
-                                                {t.status.replace(/_/g, ' ')}
-                                            </Badge>
+                        {tournaments.map((t, index) => {
+                            const art = t.banner_url || t.game?.banner_url || t.game?.icon_url;
+                            const start = when(t.starts_at);
+                            const deadline = when(t.registration_end_at);
+                            return (
+                                <li key={t.id}>
+                                    <Link
+                                        href={`/tournaments/${t.id}`}
+                                        className={`grid gap-4 py-5 sm:items-center ${index === 0 ? 'sm:grid-cols-[minmax(0,14rem)_1fr]' : 'sm:grid-cols-[8.5rem_1fr]'}`}
+                                    >
+                                        {art ? (
+                                            <img src={art} alt="" className={`w-full object-cover ${index === 0 ? 'h-40' : 'h-20'}`} />
+                                        ) : (
+                                            <p className={`font-display text-lime-300 ${index === 0 ? 'text-lg' : 'text-sm'}`}>
+                                                {t.game?.name || 'Game not set'}
+                                            </p>
+                                        )}
+                                        <div className="flex min-w-0 items-end justify-between gap-4">
+                                            <div>
+                                                {art && <p className="text-sm text-lime-300">{t.game?.name || 'Game not set'}</p>}
+                                                <h2 className={`font-display text-white ${index === 0 ? 'text-2xl sm:text-3xl' : 'text-xl'}`}>{t.title}</h2>
+                                                <p className="mt-1 text-sm text-slate-300">
+                                                    {t.status.replace(/_/g, ' ')}
+                                                    {start ? ` · Starts ${start}` : ''}
+                                                    {deadline ? ` · Register by ${deadline}` : ''}
+                                                </p>
+                                                <p className="mt-1 text-sm text-slate-400">
+                                                    {formatLabel(t.format)}
+                                                    {t.match_format ? ` · ${t.match_format.toUpperCase()}` : ''}
+                                                    {t.region ? ` · ${t.region}` : ''}
+                                                    {` · ${t.participants_count} of ${t.capacity} entered`}
+                                                </p>
+                                            </div>
+                                            <span className="shrink-0 text-sm text-lime-300">View</span>
                                         </div>
-                                        <p className="mt-1 text-sm text-slate-400">
-                                            {t.game?.name || 'Game not set'}
-                                            {' · '}
-                                            {formatLabel(t.format)}
-                                            {' · '}
-                                            {t.match_format.toUpperCase()}
-                                            {' · '}
-                                            {t.region}
-                                        </p>
-                                        <p className="mt-2 text-xs text-slate-500">
-                                            {t.organizer?.name ? `Hosted by ${t.organizer.name}` : 'Organizer not listed'}
-                                            {t.starts_at ? ` · ${new Date(t.starts_at).toLocaleDateString()}` : ''}
-                                        </p>
-                                    </div>
-                                    <div className="text-sm text-slate-300 sm:text-right">
-                                        <div>{t.participants_count} / {t.capacity} entered</div>
-                                        <div className="text-xs text-slate-500 mt-1">
-                                            {t.prize_pool > 0 ? `${Number(t.prize_pool).toLocaleString()} ${t.currency}` : 'No prize pool'}
-                                        </div>
-                                    </div>
-                                </Link>
-                            </li>
-                        ))}
+                                    </Link>
+                                </li>
+                            );
+                        })}
                     </ul>
                 )}
             </div>

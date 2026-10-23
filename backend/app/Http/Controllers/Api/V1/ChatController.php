@@ -163,6 +163,7 @@ class ChatController extends Controller
             message: $request->validated('message'),
             attachmentUrl: $request->validated('attachment_url')
         );
+        $message->load('user.profile');
 
         return response()->json([
             'message' => 'Message sent.',

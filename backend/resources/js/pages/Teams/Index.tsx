@@ -3,8 +3,6 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { AppLayout } from '../../layouts/AppLayout';
 import { Button } from '../../components/ui/Button';
 import {
-    Users,
-    Shield,
     Plus,
     Search,
 } from 'lucide-react';
@@ -113,7 +111,7 @@ export default function TeamsIndex() {
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
                     <div>
-                        <h1 className="text-3xl font-semibold tracking-tight text-white">Teams</h1>
+                        <h1 className="font-display text-4xl text-white">Teams</h1>
                         <p className="mt-2 text-sm text-slate-400">
                             Rosters that are open, closed, or taking applications.
                         </p>
@@ -141,14 +139,14 @@ export default function TeamsIndex() {
                             onChange={(e) => setSearch(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && fetchTeams()}
                             placeholder="Search teams by name, clan tag, or university..."
-                            className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                            className="min-h-11 w-full border border-slate-700 bg-transparent pl-9 pr-4 text-sm text-white placeholder:text-slate-500 focus:border-lime-300 focus:outline-none"
                         />
                     </div>
 
                     <select
                         value={recruitmentFilter}
                         onChange={(e) => setRecruitmentFilter(e.target.value)}
-                        className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-emerald-500"
+                        className="min-h-11 border border-slate-700 bg-transparent px-3 text-sm text-slate-200 focus:border-lime-300 focus:outline-none"
                     >
                         <option value="">All Recruitment Statuses</option>
                         <option value="open">Open Recruitment</option>
@@ -165,27 +163,26 @@ export default function TeamsIndex() {
                 {loading ? (
                     <div className="py-12 text-center text-slate-500 text-sm">Loading teams...</div>
                 ) : teams.length === 0 ? (
-                    <div className="py-16 text-center border border-slate-800/80 rounded-xl bg-slate-900/30">
-                        <Shield className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-                        <h3 className="text-base font-bold text-slate-200">No teams found</h3>
-                        <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                            Be the first campus captain to form an esports team and represent your university!
+                    <div className="border-y border-slate-800 py-10">
+                        <h2 className="text-base text-white">No teams match this view</h2>
+                        <p className="mt-2 max-w-lg text-sm text-slate-400">
+                            Nothing in the roster list matches these filters.
                         </p>
                     </div>
                 ) : (
                     <ul className="divide-y divide-slate-800 border-y border-slate-800">
                         {teams.map((team) => (
                             <li key={team.id}>
-                                <Link href={`/teams/${team.id}`} className="flex flex-col gap-1 py-4 sm:flex-row sm:items-baseline sm:justify-between">
+                                <Link href={`/teams/${team.id}`} className="grid gap-1 py-5 sm:grid-cols-[6rem_1fr_auto] sm:items-baseline sm:gap-6">
+                                    <span className="font-display text-sm text-lime-300">{team.tag}</span>
                                     <span>
-                                        <span className="block text-base text-white">{team.name}</span>
+                                        <span className="block font-display text-2xl text-white">{team.name}</span>
                                         <span className="text-sm text-slate-400">
-                                            {team.tag}
+                                            {team.game?.name || 'Game not set'}
                                             {team.university ? ` · ${team.university}` : ''}
-                                            {team.game?.name ? ` · ${team.game.name}` : ''}
                                         </span>
                                     </span>
-                                    <span className="text-sm capitalize text-slate-300">
+                                    <span className="text-sm text-slate-300">
                                         {team.recruitment_status.replace(/_/g, ' ')} · {team.members_count} players
                                     </span>
                                 </Link>
@@ -197,17 +194,16 @@ export default function TeamsIndex() {
 
             {/* Create Team Modal */}
             {showCreateModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-                    <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 space-y-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+                    <div className="w-full max-w-md space-y-4 border border-slate-800 bg-slate-950 p-6">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                                <Users className="w-5 h-5 text-emerald-400" /> Create Campus Team
-                            </h3>
+                            <h3 className="font-display text-lg text-white">Form a team</h3>
                             <button
+                                type="button"
                                 onClick={() => setShowCreateModal(false)}
-                                className="text-slate-400 hover:text-white"
+                                className="min-h-11 min-w-11 text-sm text-slate-400 hover:text-white"
                             >
-                                ✕
+                                Close
                             </button>
                         </div>
 
@@ -222,7 +218,7 @@ export default function TeamsIndex() {
                                     value={formName}
                                     onChange={(e) => setFormName(e.target.value)}
                                     placeholder="e.g. AAU Cyber Vipers"
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white"
+                                    className="min-h-11 w-full border border-slate-700 bg-transparent px-3 text-sm text-white"
                                 />
                             </div>
 
@@ -237,7 +233,7 @@ export default function TeamsIndex() {
                                     value={formTag}
                                     onChange={(e) => setFormTag(e.target.value.toUpperCase())}
                                     placeholder="e.g. ACV"
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white uppercase"
+                                    className="min-h-11 w-full border border-slate-700 bg-transparent px-3 text-sm uppercase text-white"
                                 />
                             </div>
 
@@ -250,7 +246,7 @@ export default function TeamsIndex() {
                                     value={formUniversity}
                                     onChange={(e) => setFormUniversity(e.target.value)}
                                     placeholder="e.g. Addis Ababa University (AAU)"
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white"
+                                    className="min-h-11 w-full border border-slate-700 bg-transparent px-3 text-sm text-white"
                                 />
                             </div>
 
@@ -263,7 +259,7 @@ export default function TeamsIndex() {
                                     onChange={(e) => setFormBio(e.target.value)}
                                     rows={3}
                                     placeholder="Brief background, target games, or practice schedule..."
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white resize-none"
+                                    className="w-full resize-none border border-slate-700 bg-transparent p-3 text-sm text-white"
                                 />
                             </div>
 

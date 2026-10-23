@@ -84,13 +84,13 @@ export const Modal: React.FC<ModalProps> = ({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
             role="presentation"
             onClick={onClose}
         >
             <div
                 ref={panelRef}
-                className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl text-left"
+                className="relative w-full max-w-lg border border-slate-800 bg-slate-950 p-6 text-left"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="modal-title"
@@ -98,7 +98,7 @@ export const Modal: React.FC<ModalProps> = ({
             >
                 <div className="flex items-center justify-between pb-4 border-b border-slate-800">
                     <div>
-                        <h3 id="modal-title" className="text-lg font-bold text-slate-100">
+                        <h3 id="modal-title" className="font-display text-lg text-slate-100">
                             {title}
                         </h3>
                         {description && (

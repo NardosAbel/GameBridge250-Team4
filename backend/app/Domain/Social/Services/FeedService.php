@@ -3,6 +3,7 @@
 namespace App\Domain\Social\Services;
 
 use App\Domain\Communities\Models\CommunityMember;
+use App\Domain\Profiles\Models\Game;
 use App\Domain\Social\Models\Follow;
 use App\Domain\Social\Models\Post;
 use App\Domain\Social\Models\UserBlock;
@@ -104,7 +105,7 @@ class FeedService
                 ->pluck('team_id')
                 ->all();
 
-            $preferredGameIds = $user->profile?->preferred_games ?? [];
+            $preferredGameIds = $this->preferredGameIds($user->profile?->preferred_games ?? []);
             $userLocation = $user->profile?->location;
 
             // Personalized algorithm: followed users, joined communities/teams, preferred games, location, or user's own posts
@@ -136,5 +137,31 @@ class FeedService
             ->orderByDesc('pinned')
             ->orderByDesc('created_at')
             ->paginate($perPage);
+    }
+
+    /**
+     * Profiles store preferred games as names or ids. Only numeric ids can be compared to posts.game_id.
+     *
+     * @param  array<int, mixed>  $preferred
+     * @return array<int, int>
+     */
+    private function preferredGameIds(array $preferred): array
+    {
+        $ids = [];
+        $names = [];
+
+        foreach ($preferred as $value) {
+            if (is_int($value) || (is_string($value) && ctype_digit($value))) {
+                $ids[] = (int) $value;
+            } elseif (is_string($value) && $value !== '') {
+                $names[] = $value;
+            }
+        }
+
+        if ($names !== []) {
+            $ids = array_merge($ids, Game::query()->whereIn('name', $names)->pluck('id')->all());
+        }
+
+        return array_values(array_unique($ids));
     }
 }

@@ -96,7 +96,7 @@ class TournamentController extends Controller
         ], 201);
     }
 
-    public function show(Request $request, Tournament $tournament, StandingsService $standingsService): JsonResponse
+    public function show(Request $request, Tournament $tournament, StandingsService $standingsService, RegisterTournamentAction $registrations): JsonResponse
     {
         $this->authorizeTournamentView($request, $tournament);
 
@@ -108,10 +108,22 @@ class TournamentController extends Controller
             $standings = $standingsService->getBracketStandings($firstBracket);
         }
 
+        $payload = (new TournamentResource($tournament))->resolve($request);
+        $viewer = $this->viewer($request);
+        $registration = $viewer
+            ? $tournament->registrations()->where('user_id', $viewer->id)->first(['id', 'status'])
+            : null;
+        $payload['viewer_registration'] = $registration
+            ? ['status' => $registration->status]
+            : null;
+        $payload['viewer_eligibility'] = $viewer
+            ? $registrations->eligibilityIssue($viewer, $tournament)
+            : null;
+
         return response()->json([
             'success' => true,
             'data' => [
-                'tournament' => new TournamentResource($tournament),
+                'tournament' => $payload,
                 'brackets' => BracketResource::collection($tournament->brackets),
                 'standings' => $standings,
             ],

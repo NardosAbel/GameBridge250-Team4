@@ -125,5 +125,6 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->call(EducationSeeder::class);
+        $this->call(DemoCompetitionSeeder::class);
     }
 }

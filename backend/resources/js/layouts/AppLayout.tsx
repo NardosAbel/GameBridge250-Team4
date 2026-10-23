@@ -1,31 +1,15 @@
 import React, { useState } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import {
-    Gamepad2,
-    Trophy,
-    Users,
-    Building2,
-    BookOpen,
     Menu,
     X,
     LogOut,
-    User as UserIcon,
     ShieldCheck,
     CheckCircle2,
     AlertCircle,
-    Flame,
-    Globe,
-    UserPlus,
-    MessageSquare,
-    Bell,
-    ShieldAlert,
-    Ticket,
-    QrCode,
 } from 'lucide-react';
-import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
 import { ThemeSwitcher } from '../components/ui/ThemeSwitcher';
 import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
 import { useTranslation } from '../hooks/useTranslation';
 
 interface AuthUser {
@@ -57,7 +41,7 @@ interface PageProps {
 
 export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { t } = useTranslation();
-    const { auth, appName, flash } = usePage<PageProps>().props;
+    const { auth, flash } = usePage<PageProps>().props;
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const handleLogout = () => {
@@ -75,136 +59,67 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             </a>
 
             {/* Top Navigation */}
-            <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
+            <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-slate-950">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                     {/* Logo */}
                     <div className="flex items-center gap-3">
-                        <Link href="/" className="flex items-center gap-2.5 group">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-amber-500 flex items-center justify-center shadow-lg shadow-emerald-950/60 group-hover:scale-105 transition-transform">
-                                <Gamepad2 className="w-6 h-6 text-slate-950" />
-                            </div>
-                            <div>
-                                <span className="font-extrabold text-base tracking-tight text-white block">
-                                    Campus Esports
+                        <Link href="/" className="flex items-center gap-3">
+                            <span className="w-8 h-8 border border-amber-200 text-amber-200 text-xs font-semibold flex items-center justify-center">
+                                GB
+                            </span>
+                            <span>
+                                <span className="font-semibold text-sm tracking-tight text-white block leading-none">
+                                    GameBridge
                                 </span>
-                                <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-widest block -mt-1">
-                                    Ethiopia
+                                <span className="text-[11px] text-slate-400 block mt-1">
+                                    Campus Ethiopia
                                 </span>
-                            </div>
+                            </span>
                         </Link>
                     </div>
 
                     {/* Desktop Navigation Links */}
-                    <nav className="hidden md:flex items-center gap-1">
-                        <Link
-                            href="/"
-                            className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors"
-                        >
-                            {t('common.platform_title')}
+                    <nav className="hidden md:flex items-center gap-1" aria-label="Primary">
+                        <Link href="/tournaments" className="px-3 py-2 text-sm text-slate-200 hover:text-white">
+                            Competitions
                         </Link>
-                        <Link
-                            href="/feed"
-                            className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-                        >
-                            <Flame className="w-4 h-4 text-orange-400" />
-                            Feed
-                        </Link>
-                        <Link
-                            href="/tournaments"
-                            className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-                        >
-                            <Trophy className="w-4 h-4 text-amber-400" />
-                            Tournaments
-                        </Link>
-                        <Link
-                            href="/rankings"
-                            className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-                        >
-                            <Gamepad2 className="w-4 h-4 text-purple-400" />
+                        <Link href="/rankings" className="px-3 py-2 text-sm text-slate-200 hover:text-white">
                             Rankings
                         </Link>
-                        <Link
-                            href="/teams"
-                            className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-                        >
-                            <Users className="w-4 h-4 text-emerald-400" />
+                        <Link href="/teams" className="px-3 py-2 text-sm text-slate-200 hover:text-white">
                             {t('common.teams')}
                         </Link>
-                        <Link
-                            href="/communities"
-                            className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-                        >
-                            <Globe className="w-4 h-4 text-cyan-400" />
-                            Communities
-                        </Link>
-                        <Link
-                            href="/recruitment"
-                            className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-                        >
-                            <UserPlus className="w-4 h-4 text-pink-400" />
-                            Recruitment
-                        </Link>
-                        <Link
-                            href="/venues"
-                            className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-                        >
-                            <Building2 className="w-4 h-4 text-emerald-400" />
+                        <Link href="/venues" className="px-3 py-2 text-sm text-slate-200 hover:text-white">
                             Venues
                         </Link>
-                        <Link
-                            href="/education"
-                            className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-                        >
-                            <BookOpen className="w-4 h-4 text-indigo-400" />
-                            Learning Hub
+                        <Link href="/education" className="px-3 py-2 text-sm text-slate-200 hover:text-white">
+                            Learning
                         </Link>
-                        {auth.user && (
-                            <>
-                                <Link
-                                    href="/my-tickets"
-                                    className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-                                >
-                                    <Ticket className="w-4 h-4 text-amber-400" />
-                                    Tickets
-                                </Link>
-                                <Link
-                                    href="/scanner"
-                                    className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-                                    title="Gate QR Scanner"
-                                >
-                                    <QrCode className="w-4 h-4 text-teal-400" />
-                                    Gate Scan
-                                </Link>
-                                <Link
-                                    href="/chat"
-                                    className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-                                >
-                                    <MessageSquare className="w-4 h-4 text-blue-400" />
-                                    Chat
-                                </Link>
-                                <Link
-                                    href="/notifications"
-                                    className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-                                >
-                                    <Bell className="w-4 h-4 text-amber-400" />
-                                    Alerts
-                                </Link>
-                                {auth.user.roles.some((r: string) => ['super_admin', 'moderator'].includes(r)) && (
-                                    <Link
-                                        href="/moderation/queue"
-                                        className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 transition-colors flex items-center gap-1.5"
-                                    >
-                                        <ShieldAlert className="w-4 h-4 text-rose-400" />
-                                        Mod Queue
-                                    </Link>
+                        <details className="relative">
+                            <summary className="px-3 py-2 text-sm text-slate-400 hover:text-white cursor-pointer list-none">
+                                More
+                            </summary>
+                            <div className="absolute right-0 mt-1 w-44 border border-slate-700 bg-slate-950 py-1 z-50">
+                                <Link href="/feed" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Feed</Link>
+                                <Link href="/communities" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Communities</Link>
+                                <Link href="/recruitment" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Recruitment</Link>
+                                {auth.user && (
+                                    <>
+                                        <Link href="/my-tickets" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Tickets</Link>
+                                        <Link href="/scanner" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Gate scan</Link>
+                                        <Link href="/chat" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Chat</Link>
+                                        <Link href="/notifications" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Alerts</Link>
+                                        {auth.user.roles.some((r: string) => ['super_admin', 'moderator'].includes(r)) && (
+                                            <Link href="/moderation/queue" className="block px-3 py-2 text-sm text-slate-200 hover:bg-slate-900">Moderation</Link>
+                                        )}
+                                    </>
                                 )}
-                            </>
-                        )}
+                            </div>
+                        </details>
                     </nav>
 
                     {/* Right Utilities (Theme, Lang, Auth) */}
                     <div className="hidden md:flex items-center gap-3">
-                        <LanguageSwitcher />
                         <ThemeSwitcher />
 
                         {auth.user ? (
@@ -261,11 +176,13 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
                     {/* Mobile hamburger */}
                     <div className="flex md:hidden items-center gap-2">
-                        <LanguageSwitcher />
+                        <ThemeSwitcher />
                         <button
+                            type="button"
                             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                            className="p-2 rounded-lg bg-slate-900 text-slate-300 hover:text-white"
+                            className="inline-flex min-h-11 min-w-11 items-center justify-center text-slate-200"
                             aria-label="Toggle navigation menu"
+                            aria-expanded={mobileMenuOpen}
                         >
                             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                         </button>
@@ -386,65 +303,16 @@ export const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children })
             </main>
 
             {/* Footer */}
-            <footer className="border-t border-slate-900 bg-slate-950/90 py-10 text-xs text-slate-400">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8">
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center text-slate-950 font-black text-xs">
-                                ET
-                            </div>
-                            <span className="font-bold text-sm text-slate-200">Campus Esports Ethiopia</span>
-                        </div>
-                        <p className="text-slate-400 leading-relaxed">
-                            Connecting Ethiopian university gamers, official university clubs, gaming zones, and sponsors on a high-performance tournament network.
-                        </p>
-                    </div>
-
-                    <div>
-                        <h4 className="font-semibold text-slate-200 mb-3 uppercase tracking-wider text-[11px]">
-                            Universities Network
-                        </h4>
-                        <ul className="space-y-2">
-                            <li>Addis Ababa University (AAU)</li>
-                            <li>AASTU & ASTU</li>
-                            <li>Hawassa University</li>
-                            <li>Jimma University</li>
-                            <li>Bahir Dar University</li>
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h4 className="font-semibold text-slate-200 mb-3 uppercase tracking-wider text-[11px]">
-                            Platform
-                        </h4>
-                        <ul className="space-y-2">
-                            <li><Link href="/tournaments" className="hover:text-emerald-400">Tournaments & Brackets</Link></li>
-                            <li><Link href="/venues" className="hover:text-emerald-400">Gaming Zones & LAN Venues</Link></li>
-                            <li><Link href="/learning" className="hover:text-emerald-400">Digital Literacy & Safety</Link></li>
-                            <li><Link href="/tickets" className="hover:text-emerald-400">Local Ticketing (Telebirr/Chapa)</Link></li>
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h4 className="font-semibold text-slate-200 mb-3 uppercase tracking-wider text-[11px]">
-                            Standards & Compliance
-                        </h4>
-                        <div className="space-y-2">
-                            <p>WCAG 2.1 AA Compliant</p>
-                            <p>Minor Safeguarding & Anti-Cheat</p>
-                            <p>Low-bandwidth & Offline Ready</p>
-                            <Badge variant="success" size="sm" className="mt-2">Phase 1 Foundation</Badge>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <p>© {new Date().getFullYear()} Campus Esports Ethiopia. All rights reserved.</p>
-                    <div className="flex items-center gap-4">
-                        <span>English / አማርኛ</span>
-                        <span>•</span>
-                        <span>PostgreSQL / Redis / Reverb</span>
-                    </div>
+            <footer className="border-t border-slate-800 py-8 text-sm text-slate-400">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <p>GameBridge · Campus esports for Ethiopia</p>
+                    <nav aria-label="Footer" className="flex flex-wrap gap-x-4 gap-y-2">
+                        <Link href="/tournaments" className="hover:text-white">Competitions</Link>
+                        <Link href="/teams" className="hover:text-white">Teams</Link>
+                        <Link href="/venues" className="hover:text-white">Venues</Link>
+                        <Link href="/education" className="hover:text-white">Learning</Link>
+                        <Link href="/my-tickets" className="hover:text-white">Tickets</Link>
+                    </nav>
                 </div>
             </footer>
         </div>

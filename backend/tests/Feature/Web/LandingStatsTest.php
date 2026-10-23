@@ -58,5 +58,8 @@ test('the landing page counts stored records and hides drafts', function () {
             ->where('stats.totalTeams', 1)
             ->where('stats.activeTournaments', 1)
             ->where('stats.partnerUniversities', 1)
-            ->where('games.0.name', 'Campus FC'));
+            ->where('games.0.name', 'Campus FC')
+            ->has('featuredTournaments', 1)
+            ->where('featuredTournaments.0.title', 'Landing Open Cup')
+            ->missing('featuredTournaments.1'));
 });

@@ -1,10 +1,12 @@
 <?php
 
+use App\Domain\Tournaments\Models\Tournament;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\HomeController;
 use App\Http\Controllers\Web\PlayerPassportController;
 use App\Http\Controllers\Web\ProfileController;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -95,6 +97,9 @@ Route::middleware('auth')->group(function () {
     })->name('tournaments.show');
 
     Route::get('/tournaments/{id}/manage', function ($id) {
+        $tournament = Tournament::query()->findOrFail($id);
+        Gate::authorize('update', $tournament);
+
         return Inertia::render('Tournaments/Manage', ['tournamentId' => (int) $id]);
     })->name('tournaments.manage');
 
@@ -174,6 +179,9 @@ Route::middleware('auth')->group(function () {
     })->name('admin.dashboard');
 
     Route::get('/tournaments/{id}/prize-pool', function ($id) {
+        $tournament = Tournament::query()->findOrFail($id);
+        Gate::authorize('update', $tournament);
+
         return Inertia::render('Tournaments/PrizePool', ['tournamentId' => (int) $id]);
     })->name('tournaments.prize-pool');
 

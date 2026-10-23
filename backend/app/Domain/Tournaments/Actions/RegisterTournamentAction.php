@@ -128,6 +128,21 @@ class RegisterTournamentAction
     }
 
     /**
+     * Reason this player cannot enter, or null when the published rules allow them.
+     * Team-only rules are checked again when a team is submitted.
+     */
+    public function eligibilityIssue(User $user, Tournament $tournament, ?Team $team = null): ?string
+    {
+        try {
+            $this->validateEligibility($user, $tournament, $team);
+
+            return null;
+        } catch (InvalidArgumentException $exception) {
+            return $exception->getMessage();
+        }
+    }
+
+    /**
      * Validate participant attributes against tournament eligibility criteria.
      */
     protected function validateEligibility(User $user, Tournament $tournament, ?Team $team = null): void

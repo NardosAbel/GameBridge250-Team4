@@ -279,17 +279,10 @@ export default function TournamentManage({ tournamentId }: Props) {
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
                 {/* Header */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900 border border-slate-800 p-6 rounded-2xl">
+                <div className="flex flex-col gap-4 border-b border-slate-800 pb-6 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 font-bold">
-                                Organizer Dashboard
-                            </Badge>
-                            <Badge variant="neutral" className="capitalize">
-                                Status: {tournament.status.replace('_', ' ')}
-                            </Badge>
-                        </div>
-                        <h1 className="text-2xl font-black text-white">{tournament.title}</h1>
+                        <p className="text-sm capitalize text-slate-400">{String(tournament.status).replace(/_/g, ' ')}</p>
+                        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">{tournament.title}</h1>
                     </div>
 
                     <div className="flex items-center gap-3">

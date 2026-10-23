@@ -33,6 +33,14 @@ class HomeController extends Controller
                 ->orderBy('name')
                 ->limit(8)
                 ->get(['name', 'category', 'publisher']),
+            'featuredTournaments' => Tournament::query()
+                ->with(['game:id,name', 'organizer:id,name'])
+                ->withCount(['approvedRegistrations as participants_count'])
+                ->where('visibility', 'public')
+                ->whereIn('status', ['published', 'registration_open', 'check_in', 'live'])
+                ->orderBy('starts_at')
+                ->limit(4)
+                ->get(),
         ]);
     }
 }

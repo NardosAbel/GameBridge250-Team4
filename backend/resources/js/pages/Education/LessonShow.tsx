@@ -57,7 +57,7 @@ interface Props {
 export default function LessonShow({ lessonId }: Props) {
     const [lesson, setLesson] = useState<LessonData | null>(null);
     const [loading, setLoading] = useState(true);
-    const [locale, setLocale] = useState<'en' | 'am'>('en');
+    const [locale] = useState<'en' | 'am'>('en');
     const [completing, setCompleting] = useState(false);
     const [isCompleted, setIsCompleted] = useState(false);
     const [downloadedOffline, setDownloadedOffline] = useState(false);
@@ -194,20 +194,6 @@ export default function LessonShow({ lessonId }: Props) {
                             </Button>
                         )}
 
-                        <div className="flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700">
-                            <button
-                                onClick={() => setLocale('en')}
-                                className={`px-2.5 py-1 rounded text-xs font-semibold ${locale === 'en' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}
-                            >
-                                EN
-                            </button>
-                            <button
-                                onClick={() => setLocale('am')}
-                                className={`px-2.5 py-1 rounded text-xs font-semibold ${locale === 'am' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}
-                            >
-                                አማርኛ
-                            </button>
-                        </div>
                     </div>
                 </div>
 

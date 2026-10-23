@@ -2,17 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { AppLayout } from '../../layouts/AppLayout';
 import { Button } from '../../components/ui/Button';
-import { Card, CardBody } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
 import {
     Users,
     Shield,
     Plus,
     Search,
-    MapPin,
-    GraduationCap,
-    CheckCircle,
-    Gamepad2,
 } from 'lucide-react';
 
 interface TeamItem {
@@ -119,12 +113,9 @@ export default function TeamsIndex() {
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
                     <div>
-                        <h1 className="text-2xl font-black text-white flex items-center gap-2">
-                            <Users className="w-6 h-6 text-emerald-400" />
-                            Campus Esports Teams & Rosters
-                        </h1>
-                        <p className="text-sm text-slate-400">
-                            Discover Ethiopian university teams, recruit players, and prepare for official tournaments.
+                        <h1 className="text-3xl font-semibold tracking-tight text-white">Teams</h1>
+                        <p className="mt-2 text-sm text-slate-400">
+                            Rosters that are open, closed, or taking applications.
                         </p>
                     </div>
 
@@ -144,7 +135,8 @@ export default function TeamsIndex() {
                     <div className="relative flex-1">
                         <Search className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
                         <input
-                            type="text"
+                            type="search"
+                            aria-label="Search teams"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && fetchTeams()}
@@ -181,58 +173,25 @@ export default function TeamsIndex() {
                         </p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <ul className="divide-y divide-slate-800 border-y border-slate-800">
                         {teams.map((team) => (
-                            <Link key={team.id} href={`/teams/${team.id}`} className="group block">
-                                <Card className="border border-slate-800 bg-slate-900/70 hover:border-slate-700 hover:bg-slate-900 transition-all h-full">
-                                    <CardBody className="p-5 flex flex-col justify-between h-full space-y-4">
-                                        <div>
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center font-black text-slate-950 text-base shadow-md">
-                                                        {team.tag}
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="font-bold text-base text-white group-hover:text-emerald-400 transition-colors">
-                                                            {team.name}
-                                                        </h3>
-                                                        <span className="text-xs font-semibold text-slate-400">
-                                                            [{team.tag}]
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                <Badge
-                                                    variant={team.recruitment_status === 'open' ? 'success' : 'outline'}
-                                                    className="text-[10px] capitalize"
-                                                >
-                                                    {team.recruitment_status.replace('_', ' ')}
-                                                </Badge>
-                                            </div>
-
-                                            {team.bio && (
-                                                <p className="text-xs text-slate-400 mt-3 line-clamp-2">
-                                                    {team.bio}
-                                                </p>
-                                            )}
-                                        </div>
-
-                                        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-                                            <div className="flex items-center gap-1.5">
-                                                <GraduationCap className="w-4 h-4 text-slate-500" />
-                                                <span>{team.university || 'Independent'}</span>
-                                            </div>
-
-                                            <div className="flex items-center gap-1 font-semibold text-emerald-400">
-                                                <Users className="w-3.5 h-3.5" />
-                                                <span>{team.members_count} Players</span>
-                                            </div>
-                                        </div>
-                                    </CardBody>
-                                </Card>
-                            </Link>
+                            <li key={team.id}>
+                                <Link href={`/teams/${team.id}`} className="flex flex-col gap-1 py-4 sm:flex-row sm:items-baseline sm:justify-between">
+                                    <span>
+                                        <span className="block text-base text-white">{team.name}</span>
+                                        <span className="text-sm text-slate-400">
+                                            {team.tag}
+                                            {team.university ? ` · ${team.university}` : ''}
+                                            {team.game?.name ? ` · ${team.game.name}` : ''}
+                                        </span>
+                                    </span>
+                                    <span className="text-sm capitalize text-slate-300">
+                                        {team.recruitment_status.replace(/_/g, ' ')} · {team.members_count} players
+                                    </span>
+                                </Link>
+                            </li>
                         ))}
-                    </div>
+                    </ul>
                 )}
             </div>
 

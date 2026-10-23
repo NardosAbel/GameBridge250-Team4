@@ -34,7 +34,7 @@ class TeamResource extends JsonResource
                 'handle' => $this->leader->profile?->handle ?? $this->leader->profile?->gamer_tag,
                 'avatar_url' => $this->leader->profile?->avatar_url,
             ] : null,
-            'members' => $this->members->map(fn ($m) => [
+            'members' => ($this->relationLoaded('activeMembers') ? $this->activeMembers : $this->members)->map(fn ($m) => [
                 'id' => $m->id,
                 'user_id' => $m->user_id,
                 'name' => $m->user?->name,

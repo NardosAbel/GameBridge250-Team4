@@ -64,9 +64,77 @@ Browser, same server: the register form for `browser.player.2026@example.com` / 
 
 `resources/js` is the normal Inertia layout: `pages/`, `components/ui/`, `layouts/`, `hooks/`. It should stay there.
 
+## Competitions and landing, 2026-10-23
+
+`DemoCompetitionSeeder` is idempotent and is called from `DatabaseSeeder`. On this machine it created three public `registration_open` single-elimination events and one organizer-only draft. Re-running it did not duplicate them. HabeshaSniper and three other synthetic players are approved on the AAU PUBG Mobile Open. Prize pools are 0. Records are marked `settings.demo`.
+
+The landing page and `/tournaments` now render those records instead of a gradient hero and identical cards. A local banner is shared when `APP_ENV=local` and a demo tournament exists. Drafts stay off the public list.
+
+SQLite: `DemoCompetitionSeederTest` and `LandingStatsTest` — **2 passed, 36 assertions**. `npx tsc --noEmit` exit 0. `npm run build` exit 0. Pint passed.
+
+Browser on `http://127.0.0.1:8000`: home and the competition list show the three open events; `/tournaments/1` opens AAU PUBG Mobile Open. Registration from that page, bracket generation, and result confirmation were not clicked through.
+
+These UI and seeder edits are not committed. Auth commit remains `9b8fd59`. Nothing was pushed.
+
+## Tournament page and competition workflow, 2026-10-23
+
+The public tournament page now uses the GameBridge header: game, format, organizer, schedule, deadline, capacity, rules, and prize only when those values exist. Individual entry says Register. Team entry says Register team and requires a team. Signed-out, full, closed, already registered, and ineligible states come from the show payload (`viewer_registration`, `viewer_eligibility`). The bracket empty state does not invent matches. The Players tab loads `/api/v1/tournaments/{id}/participants`. Rules no longer invent a points table.
+
+`/tournaments/{id}/manage` and `/tournaments/{id}/prize-pool` now call `Gate::authorize('update')`. A signed-in player gets 403. The organizer still opens the manage page.
+
+Dashboard drops the gradient command-center cards and lists the competitions `DashboardController` already loads. The passport uses the same shell and links each result to its tournament. The footer no longer claims WCAG compliance, an official university network, or a `/learning` route. Assigned learning paths no longer fall back to course id 1.
+
+SQLite, current tree, `PHPRC` set to the local ini:
+
+`php vendor/bin/pest tests/Feature/Tournaments/CompetitionJourneyTest.php tests/Feature/Web/LandingStatsTest.php tests/Feature/Web/PlayerDashboardAndPassportTest.php tests/Feature/Tournaments/DemoCompetitionSeederTest.php`
+
+Result: **7 passed, 121 assertions**. A later rerun of `CompetitionJourneyTest` alone was **2 passed, 47 assertions** after the manage and prize-pool gates. That test registers one player, rejects the duplicate, lets the organizer confirm the only match, writes placement 1 and a ranking, shows that place on `/players/JourneyWinner`, forbids an outsider from confirm, override, manage, and prize-pool, and reports a university restriction before registration.
+
+`php vendor/bin/pint --dirty` passed. `npx tsc --noEmit` exit 0. There is no frontend lint script in `backend/package.json`. `npm run build` exit 0 (about 6s).
+
+Browser on `http://127.0.0.1:8000`, after that build:
+
+- Signed in as BrowserPlayer26, `/tournaments/3` showed Register, not Register team, and an empty bracket.
+- Confirming registration created one `tournament_registrations` row for tournament 3, user 5, status approved. A second POST returned 422, "You are already registered for this tournament." The count stayed 1. The Players tab listed BrowserPlayer26.
+- The same player received HTTP 403 for `PUT /api/v1/tournaments/3/status` and `POST /api/v1/tournaments/3/bracket`, and the manage page rendered Laravel's 403.
+- After logout, `organizer@campusesports.et` reached `/dashboard` and `/tournaments/3/manage`. Seeding showed one participant, Browser Player. Bracket generation was not clicked, so the live qualifier was not moved to live.
+- `/teams` listed Kilo Rifles, Hawassa Green, and THE OZES. The two seeded teams show 0 players because the seeder does not create roster rows.
+- The PHP development server log had no 500 responses during this pass.
+
+The confirmed-result passport path was exercised by `CompetitionJourneyTest` on SQLite, not by finishing a match in the browser. These edits are not committed. Nothing was pushed.
+
+## UI shell, theme, and team applications, 2026-10-23
+
+The shared shell no longer shows a language control or the yellow “Local demonstration data” banner. `LanguageSwitcher.tsx` is deleted. A search of `backend/resources` found no `LanguageSwitcher`, `setLocale`, `አማርኛ`, or “Local demonstration”. Education pages keep English and no longer render an EN/አማርኛ toggle. `useTranslation` remains for existing labels. Seeders and demo rows were not deleted.
+
+Theme is `localStorage.theme` (`dark` or `light`) plus the `dark` class on `documentElement`. The default, with no stored value, is dark. `app.blade.php` removes `dark` before paint when the stored value is `light`. Light mode remaps the existing slate utilities in `app.css`. Reduced motion is respected.
+
+Team “apply” is a join request, not a tournament entry. `POST /api/v1/teams/{id}/invite` with `type=join_request` stores one invitation as role `player` for the signed-in user. Closed recruitment and a second pending request return 422. `POST /api/v1/team-invitations/{id}/respond` accepts a join request only for a roster manager (`super_admin`, `leader_id`, or owner/captain member). The applicant or a manager can decline. The team page shows `viewer_request` and, for managers, `pending_requests`. A captain does not see the apply form.
+
+SQLite, `PHPRC` set to the local ini:
+
+`php vendor/bin/pest tests/Feature/Teams/TeamApplicationTest.php`
+
+Result: **1 passed, 15 assertions**. It covers one stored application, a rejected duplicate, a stranger who cannot apply as someone else or accept, the applicant payload, captain accept creating an active member, and closed recruitment. An earlier combined run with `CompetitionJourneyTest` was **3 passed, 62 assertions**.
+
+`php vendor/bin/pint --dirty` passed after the leader-id policy change. `npx tsc --noEmit` exit 0. There is no frontend lint script. `npm run build` exit 0. The PHP server log for `127.0.0.1:8000` showed no 500 responses during this pass.
+
+Browser on that server, signed in as YonasBekele unless noted:
+
+- Light theme was applied, stored, and still light after opening `/teams/3`. Toggling back to dark on `/tournaments` at a 390×844 viewport set `localStorage.theme` to `dark` and the `dark` class. A reload of `/` kept dark. Body background was the dark slate token. No horizontal overflow (`scrollWidth` 390, `clientWidth` 390) on `/`, `/tournaments`, `/tournaments/3`, `/teams/3`, or `/education`.
+- The mobile header is a menu button. Opening it showed Competitions, Rankings, Teams, Venues, Learning Hub, My Tickets, Gate QR Scanner, the account link, and Log Out. No language item and no demo banner.
+- Hawassa Green (`/teams/3`) after the latest build did not show Apply to join for the captain. The roster listed TournamentDirector as player, and history said Campus League Organizer joined as player. Postgres already had invitation 2 (team 3, user 2, join_request, accepted) and an active `team_members` row from the earlier Accept click. That Accept was clicked in the browser before this reload; the duplicate and unauthorized paths were not re-clicked.
+- `/tournaments/3` at 390 showed Nationwide Valorant Qualifier, a Register action, and “No matches yet”. Bracket generation and match confirmation were not clicked.
+- `/education` had no language toggle.
+
+These edits are not committed. Nothing was pushed.
+
 ## Next
 
-- Create one real open tournament as the seeded organizer and register the new player through the browser.
+- Generate a bracket only when an event has enough real entrants, then confirm a result in the browser and open that player's passport.
+- The organizer manage page body still uses the older panel layout. Venues, feed, chat, tickets, scanner, profile edit, rankings, communities, and sponsorship were not redesigned in this pass.
+- Kilo Rifles still has no roster rows, so it can show 0 players. THE OZES has a pre-existing pending join request that was not reviewed in the browser.
+- Tablet and wide-desktop layouts were not measured separately. The 390×844 check used device emulation and was cleared afterward.
 - Do not enable live payment providers.
 
 ## Not done

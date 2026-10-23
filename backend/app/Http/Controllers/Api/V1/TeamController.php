@@ -21,6 +21,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use InvalidArgumentException;
 
 class TeamController extends Controller
 {
@@ -47,7 +48,8 @@ class TeamController extends Controller
             $search = $request->query('search');
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('tag', 'like', "%{$search}%");
+                    ->orWhere('tag', 'like', "%{$search}%")
+                    ->orWhere('university', 'like', "%{$search}%");
             });
         }
 
@@ -78,14 +80,47 @@ class TeamController extends Controller
         ], 201);
     }
 
-    public function show(Team $team): JsonResponse
+    public function show(Request $request, Team $team): JsonResponse
     {
         Gate::authorize('view', $team);
 
         $team->load(['leader.profile', 'activeMembers.user.profile', 'game', 'rosterHistory.user']);
+        $payload = (new TeamResource($team))->resolve($request);
+        $viewer = $request->user();
+
+        if ($viewer) {
+            $requestRow = $team->invitations()
+                ->where('user_id', $viewer->id)
+                ->where('type', 'join_request')
+                ->latest('id')
+                ->first(['id', 'status']);
+            $payload['viewer_request'] = $requestRow
+                ? ['id' => $requestRow->id, 'status' => $requestRow->status]
+                : null;
+        } else {
+            $payload['viewer_request'] = null;
+        }
+
+        $payload['pending_requests'] = $viewer && Gate::forUser($viewer)->allows('manageRoster', $team)
+            ? $team->invitations()
+                ->where('type', 'join_request')
+                ->where('status', 'pending')
+                ->with('user.profile')
+                ->get()
+                ->map(fn (TeamInvitation $invitation) => [
+                    'id' => $invitation->id,
+                    'message' => $invitation->message,
+                    'user' => [
+                        'id' => $invitation->user?->id,
+                        'name' => $invitation->user?->name,
+                        'gamer_tag' => $invitation->user?->profile?->gamer_tag,
+                    ],
+                ])
+                ->values()
+            : [];
 
         return response()->json([
-            'data' => new TeamResource($team),
+            'data' => $payload,
         ]);
     }
 
@@ -103,19 +138,30 @@ class TeamController extends Controller
 
     public function invite(TeamInviteRequest $request, Team $team, InviteOrRequestTeamAction $action): JsonResponse
     {
-        $type = $request->validated('type', 'invitation');
-        $targetUser = User::findOrFail($request->validated('user_id'));
+        $type = $request->validated('type') ?? 'invitation';
+        $actor = $request->user();
 
-        if ($type === 'invitation') {
+        if ($type === 'join_request') {
+            if ((int) $request->validated('user_id') !== (int) $actor->id) {
+                abort(403, 'You can only apply for yourself.');
+            }
+            if ($team->recruitment_status === 'closed') {
+                throw new InvalidArgumentException('This team is not accepting players.');
+            }
+            $targetUser = $actor;
+            $role = 'player';
+        } else {
             Gate::authorize('invite', $team);
+            $targetUser = User::findOrFail($request->validated('user_id'));
+            $role = $request->validated('role') ?? 'player';
         }
 
         $invitation = $action->execute(
-            actor: $request->user(),
+            actor: $actor,
             team: $team,
             targetUser: $targetUser,
             type: $type,
-            role: $request->validated('role', 'player'),
+            role: $role,
             message: $request->validated('message')
         );
 
@@ -130,6 +176,22 @@ class TeamController extends Controller
         $validated = $request->validate([
             'response' => ['required', 'string', 'in:accepted,declined'],
         ]);
+
+        $invitation->loadMissing('team');
+        $actor = $request->user();
+        $isApplicant = (int) $invitation->user_id === (int) $actor->id;
+        $canReview = Gate::forUser($actor)->allows('manageRoster', $invitation->team);
+
+        if ($invitation->type === 'join_request') {
+            if ($validated['response'] === 'accepted' && ! $canReview) {
+                abort(403);
+            }
+            if ($validated['response'] === 'declined' && ! $canReview && ! $isApplicant) {
+                abort(403);
+            }
+        } elseif (! $isApplicant) {
+            abort(403);
+        }
 
         $resolved = $action->execute(
             actor: $request->user(),

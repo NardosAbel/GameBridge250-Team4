@@ -1,24 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { AppLayout } from '../../layouts/AppLayout';
-import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import {
-    Trophy,
     Search,
     Plus,
-    Calendar,
-    Users,
-    Gamepad2,
-    Shield,
-    Sparkles,
-    CheckCircle2,
     AlertCircle,
-    SlidersHorizontal,
-    Tv
 } from 'lucide-react';
 
 interface Game {
@@ -98,7 +88,8 @@ export default function TournamentIndex() {
             const res = await fetch(`/api/v1/tournaments?${params.toString()}`);
             const data = await res.json();
             if (data.success) {
-                setTournaments(data.data);
+                const payload = data.data;
+                setTournaments(Array.isArray(payload) ? payload : (payload?.data ?? []));
             }
         } catch (e) {
             console.error('Failed to load tournaments', e);
@@ -191,35 +182,25 @@ export default function TournamentIndex() {
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
                 {/* Hero Header */}
-                <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-emerald-950 via-slate-900 to-indigo-950 border border-emerald-500/20 p-8 sm:p-12 shadow-2xl">
-                    <div className="relative z-10 max-w-2xl space-y-4">
-                        <Badge variant="success" className="px-3 py-1 text-xs uppercase tracking-wider font-semibold">
-                            Esports Tournaments
-                        </Badge>
-                        <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-                            Collegiate & Varsity Championship
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-slate-800 pb-6">
+                    <div className="max-w-2xl">
+                        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
+                            Competitions
                         </h1>
-                        <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-                            Compete in verified Ethiopian inter-campus tournaments across PUBG Mobile, Valorant, and FC 25. Win cash prize pools and season points.
+                        <p className="mt-2 text-sm sm:text-base text-slate-300 leading-relaxed">
+                            Published events with an open registration window. Drafts stay with the organizer until they are published.
                         </p>
-                        <div className="pt-2 flex flex-wrap gap-3">
-                            {isOrganizer && (
-                                <Button
-                                    variant="primary"
-                                    onClick={() => setShowCreateModal(true)}
-                                    className="flex items-center gap-2"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    Host Tournament
-                                </Button>
-                            )}
-                            <Link href="/rankings">
-                                <Button variant="outline" className="flex items-center gap-2">
-                                    <Trophy className="w-4 h-4 text-amber-400" />
-                                    View Leaderboards
-                                </Button>
-                            </Link>
-                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                        {isOrganizer && (
+                            <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+                                <Plus className="w-4 h-4" />
+                                Host a tournament
+                            </Button>
+                        )}
+                        <Link href="/rankings">
+                            <Button variant="outline">Rankings</Button>
+                        </Link>
                     </div>
                 </div>
 
@@ -287,88 +268,55 @@ export default function TournamentIndex() {
                         ))}
                     </div>
                 ) : tournaments.length === 0 ? (
-                    <div className="text-center py-16 bg-slate-900/30 rounded-3xl border border-dashed border-slate-800 space-y-4">
-                        <Trophy className="w-12 h-12 text-slate-600 mx-auto" />
-                        <h3 className="text-lg font-bold text-white">No tournaments found</h3>
-                        <p className="text-sm text-slate-400 max-w-sm mx-auto">
-                            No tournaments match your current filters. Check back soon or host your own tournament.
+                    <div className="py-12 border border-slate-800 px-6">
+                        <h2 className="text-lg font-semibold text-white">No competitions match this view</h2>
+                        <p className="mt-2 text-sm text-slate-400 max-w-lg">
+                            {isOrganizer
+                                ? 'Nothing is published for these filters. Host a tournament to create the first one. It stays a draft until you publish it.'
+                                : 'Organizers have not published a competition that matches these filters.'}
                         </p>
+                        {isOrganizer && (
+                            <Button className="mt-5" onClick={() => setShowCreateModal(true)}>
+                                Host a tournament
+                            </Button>
+                        )}
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <ul className="divide-y divide-slate-800 border-y border-slate-800">
                         {tournaments.map((t) => (
-                            <Link key={t.id} href={`/tournaments/${t.id}`} className="group block">
-                                <Card className="h-full bg-slate-900/50 hover:bg-slate-900 border-slate-800 hover:border-emerald-500/50 transition-all duration-300 flex flex-col justify-between overflow-hidden">
-                                    <div className="space-y-4">
-                                        {/* Header / Game Banner */}
-                                        <div className="h-32 bg-gradient-to-tr from-slate-950 to-slate-800 relative p-4 flex flex-col justify-between">
-                                            <div className="flex items-center justify-between">
-                                                <Badge variant="outline" className="bg-slate-950/80 text-xs font-semibold backdrop-blur-sm">
-                                                    {t.game?.name || 'General Esports'}
-                                                </Badge>
-                                                <Badge variant={getStatusVariant(t.status)} className="capitalize">
-                                                    {t.status.replace('_', ' ')}
-                                                </Badge>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-xs text-slate-300 font-medium">
-                                                <span className="bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-md">
-                                                    {t.match_format.toUpperCase()}
-                                                </span>
-                                                <span>•</span>
-                                                <span>{formatLabel(t.format)}</span>
-                                            </div>
+                            <li key={t.id}>
+                                <Link href={`/tournaments/${t.id}`} className="grid gap-3 py-5 sm:grid-cols-[1fr_auto] sm:items-center hover:bg-slate-900/40 px-1">
+                                    <div>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <h2 className="text-base font-semibold text-white">{t.title}</h2>
+                                            <Badge variant={getStatusVariant(t.status)}>
+                                                {t.status.replace(/_/g, ' ')}
+                                            </Badge>
                                         </div>
-
-                                        {/* Body */}
-                                        <div className="p-5 space-y-3">
-                                            <h3 className="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors line-clamp-1">
-                                                {t.title}
-                                            </h3>
-
-                                            <div className="grid grid-cols-2 gap-2 text-xs text-slate-400 pt-1">
-                                                <div className="flex items-center gap-1.5">
-                                                    <Trophy className="w-4 h-4 text-amber-400" />
-                                                    <span className="font-semibold text-slate-200">
-                                                        {t.prize_pool > 0 ? `${t.prize_pool.toLocaleString()} ${t.currency}` : 'Bragging Rights'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <Users className="w-4 h-4 text-cyan-400" />
-                                                    <span>{t.participants_count} / {t.capacity} Teams</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <Calendar className="w-4 h-4 text-indigo-400" />
-                                                    <span>{new Date(t.starts_at).toLocaleDateString()}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <Gamepad2 className="w-4 h-4 text-pink-400" />
-                                                    <span>{t.platform}</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Capacity Progress Bar */}
-                                            <div className="pt-2">
-                                                <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
-                                                    <div
-                                                        className="bg-emerald-500 h-full rounded-full transition-all duration-500"
-                                                        style={{ width: `${Math.min(100, (t.participants_count / t.capacity) * 100)}%` }}
-                                                    />
-                                                </div>
-                                            </div>
+                                        <p className="mt-1 text-sm text-slate-400">
+                                            {t.game?.name || 'Game not set'}
+                                            {' · '}
+                                            {formatLabel(t.format)}
+                                            {' · '}
+                                            {t.match_format.toUpperCase()}
+                                            {' · '}
+                                            {t.region}
+                                        </p>
+                                        <p className="mt-2 text-xs text-slate-500">
+                                            {t.organizer?.name ? `Hosted by ${t.organizer.name}` : 'Organizer not listed'}
+                                            {t.starts_at ? ` · ${new Date(t.starts_at).toLocaleDateString()}` : ''}
+                                        </p>
+                                    </div>
+                                    <div className="text-sm text-slate-300 sm:text-right">
+                                        <div>{t.participants_count} / {t.capacity} entered</div>
+                                        <div className="text-xs text-slate-500 mt-1">
+                                            {t.prize_pool > 0 ? `${Number(t.prize_pool).toLocaleString()} ${t.currency}` : 'No prize pool'}
                                         </div>
                                     </div>
-
-                                    {/* Footer */}
-                                    <div className="p-4 bg-slate-950/40 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-                                        <span>Hosted by <strong className="text-slate-300">{t.organizer?.name}</strong></span>
-                                        <span className="text-emerald-400 font-semibold group-hover:translate-x-1 transition-transform">
-                                            View Tournament &rarr;
-                                        </span>
-                                    </div>
-                                </Card>
-                            </Link>
+                                </Link>
+                            </li>
                         ))}
-                    </div>
+                    </ul>
                 )}
             </div>
 

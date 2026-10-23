@@ -116,3 +116,42 @@ test('authenticated user can retrieve their profile and logout', function () {
 
     expect($user->tokens()->count())->toBe(0);
 });
+
+test('web login starts a session and logout ends it', function () {
+    $user = User::factory()->create([
+        'email' => 'web.player@example.com',
+        'password' => Hash::make('Secret123!'),
+        'status' => UserStatusEnum::ACTIVE,
+    ]);
+    $user->assignRole(RoleEnum::PLAYER->value);
+
+    $this->post('/login', [
+        'login' => 'web.player@example.com',
+        'password' => 'Secret123!',
+    ])->assertRedirect('/dashboard');
+
+    $this->assertAuthenticatedAs($user);
+
+    $this->get('/dashboard')->assertOk();
+
+    $this->post('/logout')->assertRedirect('/');
+
+    $this->assertGuest();
+    $this->get('/dashboard')->assertRedirect('/login');
+});
+
+test('web login rejects invalid credentials', function () {
+    User::factory()->create([
+        'email' => 'web.player@example.com',
+        'password' => Hash::make('Secret123!'),
+        'status' => UserStatusEnum::ACTIVE,
+    ]);
+
+    $this->from('/login')->post('/login', [
+        'login' => 'web.player@example.com',
+        'password' => 'WrongPassword1',
+    ])->assertRedirect('/login')
+        ->assertSessionHasErrors('login');
+
+    $this->assertGuest();
+});

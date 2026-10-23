@@ -48,9 +48,25 @@ PostgreSQL Pest on the current tree, with an empty file mounted over `/var/www/h
 
 The register page rendered. A filled registration for `hanna.bekele.bridge@example.com` did not create a user. A second login attempt, after restarting the server, kept the seeded player email and a 12-character password in the form and disabled the button, but PHP never logged the POST within 90 seconds. Organizer result confirmation and the public passport were not clicked through.
 
+## Registration and login, 2026-10-23
+
+The stuck form was a server hang, not a disabled-button bug. `processing` disables the submit button after Inertia starts the POST. `RegisterUserAction` sent the verification email inside the same database transaction, and `config/mail.php` left the SMTP timeout unset. Local mail is SMTP to `127.0.0.1:1025`. Inside a container that port is not Mailpit, so the only PHP worker waited forever, the access log stayed empty, and the user row never committed. Login waited behind that same worker.
+
+The account is now committed before the email is sent. A mail failure is logged without the code and does not roll the user back. SMTP times out after 5 seconds unless `MAIL_TIMEOUT` is set. The local gitignored `.env` uses `MAIL_MAILER=log` so this machine does not wait on Mailpit.
+
+Web regression tests cover a successful session registration, a registration that survives a thrown mailer, validation errors, session login, a rejected password, logout, and the dashboard auth redirect.
+
+`php vendor/bin/pest tests/Feature/Auth/RegistrationTest.php tests/Feature/Auth/AuthenticationTest.php tests/Feature/Auth/OtpUrlTest.php` with the temporary SQLite ini: **14 passed, 87 assertions**.
+
+Host `php artisan serve` does not load that ini. `ServeCommand` starts `php -S` with `$_ENV` only, and this PHP has no default `php.ini`, so cookies failed with `openssl_cipher_iv_length()` missing. The working server is `php -c` on `127.0.0.1:8000`, with Postgres reached through a one-connection proxy on `127.0.0.1:55432` because IPv4 `5433` is a different local Postgres. A direct POST created exactly one `bridge.fix.2026@example.com` / `BridgeFix2026` profile and redirected to verify-otp. The same account and `player@campusesports.et` then redirected to `/dashboard`. A wrong password redirected back to `/login`.
+
+Browser, same server: the register form for `browser.player.2026@example.com` / `BrowserPlayer26` submitted, landed on verify-otp, accepted the local code, and opened the dashboard as that player. `email_verified_at` is set. There are still **0** tournaments, so the organizer journey has nothing to open yet.
+
+`resources/js` is the normal Inertia layout: `pages/`, `components/ui/`, `layouts/`, `hooks/`. It should stay there.
+
 ## Next
 
-- Publish Docker Postgres on a host port that local `postgres.exe` does not own, then repeat the browser journey.
+- Create one real open tournament as the seeded organizer and register the new player through the browser.
 - Do not enable live payment providers.
 
 ## Not done

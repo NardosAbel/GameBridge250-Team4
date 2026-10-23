@@ -25,7 +25,7 @@ class RegisterUserAction
      */
     public function execute(array $data): array
     {
-        return DB::transaction(function () use ($data) {
+        $registered = DB::transaction(function () use ($data) {
             $user = User::create([
                 'uuid' => (string) Str::uuid(),
                 'name' => $data['name'],
@@ -67,18 +67,20 @@ class RegisterUserAction
                 ]
             );
 
-            // Send initial verification OTP
-            $recipient = $user->email ?? $user->phone;
-            $otpType = $user->email ? 'email_verification' : 'phone_verification';
-            $otp = $this->sendOtpAction->execute($recipient, $otpType, $user);
-
             $user->load(['profile', 'roles']);
 
             return [
                 'user' => $user,
                 'token' => $token,
-                'otp' => $otp,
             ];
         });
+
+        // OTP delivery can block on SMTP. It runs after the account is committed
+        // so a mail outage cannot roll back the user or pin the database transaction.
+        $recipient = $registered['user']->email ?? $registered['user']->phone;
+        $otpType = $registered['user']->email ? 'email_verification' : 'phone_verification';
+        $registered['otp'] = $this->sendOtpAction->execute($recipient, $otpType, $registered['user']);
+
+        return $registered;
     }
 }

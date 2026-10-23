@@ -12,6 +12,7 @@ use App\Http\Requests\Tournament\ResolveDisputeRequest;
 use App\Http\Resources\DisputeResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class DisputeController extends Controller
 {
@@ -51,7 +52,7 @@ class DisputeController extends Controller
 
     public function show(Dispute $dispute): JsonResponse
     {
-        $this->authorize('view', $dispute);
+        Gate::authorize('view', $dispute);
         $dispute->load(['match.tournament', 'raisedBy', 'assignedTo']);
 
         return response()->json([

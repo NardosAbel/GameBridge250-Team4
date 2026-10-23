@@ -2,21 +2,22 @@ import React from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { AppLayout } from '../layouts/AppLayout';
 import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { Card } from '../components/ui/Card';
-import {
-    Gamepad2,
-    Trophy,
-    GraduationCap,
-    ShieldCheck,
-    Zap,
-    QrCode,
-    Sparkles,
-    Users,
-    ArrowRight,
-    MapPin,
-} from 'lucide-react';
-import { useTranslation } from '../hooks/useTranslation';
+import { ArrowRight } from 'lucide-react';
+
+interface FeaturedTournament {
+    id: number;
+    title: string;
+    status: string;
+    format: string;
+    region: string;
+    capacity: number;
+    starts_at: string | null;
+    prize_pool: string | number;
+    currency: string;
+    participants_count: number;
+    game?: { name: string } | null;
+    organizer?: { name: string } | null;
+}
 
 interface LandingProps {
     stats?: {
@@ -30,192 +31,170 @@ interface LandingProps {
         category: string;
         publisher: string;
     }>;
+    featuredTournaments?: FeaturedTournament[];
 }
+
+const statusLabel: Record<string, string> = {
+    published: 'Published',
+    registration_open: 'Registration open',
+    check_in: 'Check-in',
+    live: 'Live',
+};
+
+const formatLabel: Record<string, string> = {
+    single_elimination: 'Single elimination',
+    round_robin: 'Round robin',
+};
 
 export default function Landing({
     stats = {
-        totalPlayers: 1420,
-        totalTeams: 88,
-        activeTournaments: 6,
-        partnerUniversities: 12,
+        totalPlayers: 0,
+        totalTeams: 0,
+        activeTournaments: 0,
+        partnerUniversities: 0,
     },
-    games = [
-        { name: 'EA Sports FC 25', category: 'Sports', publisher: 'EA Sports' },
-        { name: 'PUBG Mobile', category: 'Battle Royale', publisher: 'Krafton' },
-        { name: 'Valorant', category: 'Tactical FPS', publisher: 'Riot Games' },
-        { name: 'Mobile Legends: Bang Bang', category: 'MOBA', publisher: 'Moonton' },
-        { name: 'Tekken 8', category: 'Fighting', publisher: 'Bandai Namco' },
-    ],
+    games = [],
+    featuredTournaments = [],
 }: LandingProps) {
-    const { t } = useTranslation();
-
     return (
         <AppLayout>
-            <Head title="Integrated Gaming & Esports Platform for Ethiopia" />
+            <Head title="Campus competitions for Ethiopian universities" />
 
-            {/* Hero Section */}
-            <section className="relative overflow-hidden pt-12 pb-20 md:pt-20 md:pb-32 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
-                {/* Background glowing decorations */}
-                <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute top-1/3 right-10 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold mb-6 animate-pulse">
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Ethiopia's Official University Esports & Gaming Ecosystem</span>
+            <section className="border-b border-slate-800">
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-200/80">
+                            GameBridge · Ethiopia
+                        </p>
+                        <h1 className="mt-4 text-4xl sm:text-5xl font-semibold tracking-tight text-white leading-[1.05]">
+                            Find a campus competition and enter it under your own name.
+                        </h1>
+                        <p className="mt-5 max-w-xl text-base sm:text-lg text-slate-300 leading-relaxed">
+                            GameBridge is the register for university tournaments: who is hosting, who has entered, and which results an organizer has confirmed.
+                        </p>
+                        <div className="mt-8 flex flex-wrap gap-3">
+                            <Link href="/tournaments">
+                                <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                                    Browse competitions
+                                </Button>
+                            </Link>
+                            <Link href="/register">
+                                <Button variant="outline" size="lg">
+                                    Create a player account
+                                </Button>
+                            </Link>
+                        </div>
+                        <dl className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4 border-t border-slate-800 pt-6">
+                            <div>
+                                <dt className="text-xs text-slate-400">Players</dt>
+                                <dd className="mt-1 text-2xl font-semibold text-white">{stats.totalPlayers}</dd>
+                            </div>
+                            <div>
+                                <dt className="text-xs text-slate-400">Teams</dt>
+                                <dd className="mt-1 text-2xl font-semibold text-white">{stats.totalTeams}</dd>
+                            </div>
+                            <div>
+                                <dt className="text-xs text-slate-400">Open events</dt>
+                                <dd className="mt-1 text-2xl font-semibold text-white">{stats.activeTournaments}</dd>
+                            </div>
+                            <div>
+                                <dt className="text-xs text-slate-400">Campuses</dt>
+                                <dd className="mt-1 text-2xl font-semibold text-white">{stats.partnerUniversities}</dd>
+                            </div>
+                        </dl>
                     </div>
 
-                    <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-tight sm:leading-none">
-                        Elevate Ethiopian <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-400 bg-clip-text text-transparent">Esports & Gaming</span>
-                    </h1>
-
-                    <p className="mt-6 text-base sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
-                        Compete in verified collegiate tournaments, represent your campus, gain verified student gamer credentials, and learn digital awareness skills.
-                    </p>
-
-                    <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-                        <Link href="/register">
-                            <Button size="lg" className="shadow-lg shadow-emerald-500/20 font-bold" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                                {t('common.register')}
-                            </Button>
-                        </Link>
-                        <Link href="/tournaments">
-                            <Button variant="outline" size="lg">
-                                {t('common.tournaments')}
-                            </Button>
-                        </Link>
-                    </div>
-
-                    {/* Quick Stats Grid */}
-                    <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
-                        <Card className="p-4 bg-slate-900/60 text-center border-slate-800">
-                            <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400">
-                                {stats.totalPlayers}+
+                    <div className="bg-slate-900 border border-slate-800">
+                        <div className="flex items-baseline justify-between px-5 py-4 border-b border-slate-800">
+                            <h2 className="text-sm font-semibold text-white">Open now</h2>
+                            <Link href="/tournaments" className="text-xs font-medium text-amber-200 hover:text-white">
+                                All competitions
+                            </Link>
+                        </div>
+                        {featuredTournaments.length === 0 ? (
+                            <div className="px-5 py-8">
+                                <p className="text-sm text-slate-300">No competition is open for registration.</p>
+                                <p className="mt-2 text-sm text-slate-400">
+                                    Organizers publish from the tournament list. Players will see the event here once it is public.
+                                </p>
                             </div>
-                            <div className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">
-                                Registered Gamers
-                            </div>
-                        </Card>
-                        <Card className="p-4 bg-slate-900/60 text-center border-slate-800">
-                            <div className="text-2xl sm:text-3xl font-extrabold text-teal-400">
-                                {stats.totalTeams}
-                            </div>
-                            <div className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">
-                                Campus Teams
-                            </div>
-                        </Card>
-                        <Card className="p-4 bg-slate-900/60 text-center border-slate-800">
-                            <div className="text-2xl sm:text-3xl font-extrabold text-amber-400">
-                                {stats.activeTournaments}
-                            </div>
-                            <div className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">
-                                Live Tournaments
-                            </div>
-                        </Card>
-                        <Card className="p-4 bg-slate-900/60 text-center border-slate-800">
-                            <div className="text-2xl sm:text-3xl font-extrabold text-indigo-400">
-                                {stats.partnerUniversities}
-                            </div>
-                            <div className="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">
-                                Universities
-                            </div>
-                        </Card>
+                        ) : (
+                            <ul>
+                                {featuredTournaments.map((tournament) => (
+                                    <li key={tournament.id} className="border-b border-slate-800 last:border-b-0">
+                                        <Link href={`/tournaments/${tournament.id}`} className="block px-5 py-4 hover:bg-slate-800/60">
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div>
+                                                    <p className="text-sm font-semibold text-white">{tournament.title}</p>
+                                                    <p className="mt-1 text-xs text-slate-400">
+                                                        {tournament.game?.name ?? 'Game not set'}
+                                                        {' · '}
+                                                        {tournament.region}
+                                                        {' · '}
+                                                        {formatLabel[tournament.format] ?? tournament.format}
+                                                    </p>
+                                                </div>
+                                                <span className="shrink-0 text-[11px] font-medium uppercase tracking-wide text-amber-200">
+                                                    {statusLabel[tournament.status] ?? tournament.status}
+                                                </span>
+                                            </div>
+                                            <p className="mt-3 text-xs text-slate-400">
+                                                {tournament.participants_count} of {tournament.capacity} entered
+                                                {tournament.starts_at ? ` · starts ${new Date(tournament.starts_at).toLocaleDateString()}` : ''}
+                                                {Number(tournament.prize_pool) > 0 ? ` · ${tournament.prize_pool} ${tournament.currency}` : ' · no prize pool'}
+                                            </p>
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
                 </div>
             </section>
 
-            {/* Core Pillars Section */}
-            <section className="py-20 bg-slate-950 border-t border-slate-900">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center max-w-3xl mx-auto mb-16">
-                        <Badge variant="primary" size="md">Platform Features</Badge>
-                        <h2 className="text-3xl sm:text-4xl font-bold text-white mt-3">
-                            Built for Low-Latency, Trust & Local Realities
-                        </h2>
-                        <p className="text-slate-400 mt-3 text-sm sm:text-base">
-                            Engineered for intermittent connectivity, local Ethiopian payment gateways (Telebirr & Chapa), and transparent bracket execution.
+            <section className="border-b border-slate-800">
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid gap-8 md:grid-cols-3">
+                    <div>
+                        <h2 className="text-base font-semibold text-white">Enter once</h2>
+                        <p className="mt-2 text-sm leading-relaxed text-slate-400">
+                            A player account registers for an open event. The same person cannot take a second slot.
                         </p>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <Card hover className="p-6">
-                            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-5">
-                                <Trophy className="w-6 h-6" />
-                            </div>
-                            <h3 className="text-lg font-bold text-slate-100">Automated Brackets & Dispute Proof</h3>
-                            <p className="text-slate-400 text-sm mt-2 leading-relaxed">
-                                Single/double elimination, round-robin, and Swiss brackets with screenshot verification, match refereeing, and real-time live updates.
-                            </p>
-                        </Card>
-
-                        <Card hover className="p-6">
-                            <div className="w-12 h-12 rounded-xl bg-teal-500/10 text-teal-400 flex items-center justify-center mb-5">
-                                <QrCode className="w-6 h-6" />
-                            </div>
-                            <h3 className="text-lg font-bold text-slate-100">Offline-Ready QR Entry & Ticketing</h3>
-                            <p className="text-slate-400 text-sm mt-2 leading-relaxed">
-                                Buy passes with Telebirr or Chapa. Signed QR tokens validate instantaneously at gaming zones, even during local internet downtime.
-                            </p>
-                        </Card>
-
-                        <Card hover className="p-6">
-                            <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center mb-5">
-                                <GraduationCap className="w-6 h-6" />
-                            </div>
-                            <h3 className="text-lg font-bold text-slate-100">Collegiate Network & Digital Skills</h3>
-                            <p className="text-slate-400 text-sm mt-2 leading-relaxed">
-                                Verified student status across AAU, AASTU, ASTU, Hawassa, and Jimma. Earn verified digital safety and game dev certificates.
-                            </p>
-                        </Card>
+                    <div>
+                        <h2 className="text-base font-semibold text-white">Organizers confirm results</h2>
+                        <p className="mt-2 text-sm leading-relaxed text-slate-400">
+                            Single elimination and round robin can be published. A match does not advance until an authorized organizer confirms it.
+                        </p>
+                    </div>
+                    <div>
+                        <h2 className="text-base font-semibold text-white">Passports show stored results</h2>
+                        <p className="mt-2 text-sm leading-relaxed text-slate-400">
+                            A public player page lists confirmed competition history. Private profiles stay hidden. Unconfirmed claims are not presented as verified.
+                        </p>
                     </div>
                 </div>
             </section>
 
-            {/* Supported Competitive Titles */}
-            <section className="py-16 bg-slate-900/40 border-t border-slate-900">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-10">
+            <section>
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                    <div className="flex items-end justify-between gap-4">
                         <div>
-                            <h2 className="text-2xl font-bold text-white">Supported Competitive Titles</h2>
-                            <p className="text-sm text-slate-400">Official tournament titles currently active on the platform</p>
+                            <h2 className="text-base font-semibold text-white">Games on the platform</h2>
+                            <p className="mt-1 text-sm text-slate-400">Titles saved in the catalog, not a promise that every format is live.</p>
                         </div>
-                        <Link href="/tournaments">
-                            <Button variant="ghost" size="sm" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                                View All Games
-                            </Button>
-                        </Link>
                     </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                        {games.map((game, idx) => (
-                            <Card key={idx} hover className="p-4 text-center">
-                                <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center mx-auto mb-3 text-emerald-400">
-                                    <Gamepad2 className="w-5 h-5" />
-                                </div>
-                                <h4 className="font-bold text-sm text-slate-100 truncate">{game.name}</h4>
-                                <span className="text-[11px] text-slate-400 block mt-0.5">{game.category}</span>
-                            </Card>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* Call to action */}
-            <section className="py-20 bg-gradient-to-r from-emerald-950/40 via-slate-950 to-indigo-950/40 border-t border-slate-900">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                    <h2 className="text-3xl sm:text-4xl font-extrabold text-white">
-                        Ready to Compete for Your University?
-                    </h2>
-                    <p className="text-slate-300 mt-4 text-base max-w-xl mx-auto">
-                        Create your official gamer tag, join your campus team, and participate in our upcoming inter-university qualifiers.
-                    </p>
-                    <div className="mt-8 flex justify-center gap-4">
-                        <Link href="/register">
-                            <Button size="lg" className="font-bold">
-                                Create Free Player Account
-                            </Button>
-                        </Link>
-                    </div>
+                    {games.length === 0 ? (
+                        <p className="mt-6 text-sm text-slate-400">No games have been added yet.</p>
+                    ) : (
+                        <ul className="mt-6 divide-y divide-slate-800 border-y border-slate-800">
+                            {games.map((game) => (
+                                <li key={game.name} className="flex items-baseline justify-between gap-4 py-3">
+                                    <span className="text-sm text-white">{game.name}</span>
+                                    <span className="text-xs text-slate-400">{game.publisher}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </div>
             </section>
         </AppLayout>

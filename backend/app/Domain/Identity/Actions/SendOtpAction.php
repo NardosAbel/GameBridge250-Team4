@@ -39,13 +39,22 @@ class SendOtpAction
         // (10 minutes), single-use, and rate-limited. A signed magic-link alternative
         // is a separate product change; do not put the OTP in verification URLs.
         $channel = filter_var($recipient, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
+        $delivered = false;
         if ($channel === 'email') {
-            Mail::raw(
-                "Your Campus Esports Ethiopia verification code is {$plainOtp}. It expires in 10 minutes.",
-                function ($message) use ($recipient): void {
-                    $message->to($recipient)->subject('Your verification code');
-                }
-            );
+            try {
+                Mail::raw(
+                    "Your Campus Esports Ethiopia verification code is {$plainOtp}. It expires in 10 minutes.",
+                    function ($message) use ($recipient): void {
+                        $message->to($recipient)->subject('Your verification code');
+                    }
+                );
+                $delivered = true;
+            } catch (\Throwable) {
+                Log::warning('Verification email could not be sent.', [
+                    'otp_id' => $otp->uuid,
+                    'type' => $type,
+                ]);
+            }
         } else {
             // OTP row is stored either way. No SMS provider is wired yet — do not
             // invent delivery. Local/testing still return the code in the response.
@@ -61,7 +70,9 @@ class SendOtpAction
             'recipient' => $recipient,
             'type' => $type,
             'expires_in_seconds' => 600,
-            'delivery' => $channel === 'email' ? 'email' : 'pending_sms_provider',
+            'delivery' => $channel === 'email'
+                ? ($delivered ? 'email' : 'email_failed')
+                : 'pending_sms_provider',
             // Exposed only in local and testing environments
             'code' => app()->environment(['local', 'testing']) ? $plainOtp : null,
         ];

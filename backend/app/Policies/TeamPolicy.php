@@ -20,7 +20,7 @@ class TeamPolicy
 
     public function update(User $user, Team $team): bool
     {
-        if ($user->hasRole('super_admin')) {
+        if ($user->hasRole('super_admin') || (int) $team->leader_id === (int) $user->id) {
             return true;
         }
 
@@ -38,7 +38,7 @@ class TeamPolicy
 
     public function manageRoster(User $user, Team $team): bool
     {
-        if ($user->hasRole('super_admin')) {
+        if ($user->hasRole('super_admin') || (int) $team->leader_id === (int) $user->id) {
             return true;
         }
 

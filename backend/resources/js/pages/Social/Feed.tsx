@@ -1,686 +1,403 @@
-import React, { useState, useEffect } from 'react';
-import { Head, usePage } from '@inertiajs/react';
+import React, { useEffect, useState } from 'react';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { Heart, ImagePlus, MessageCircle, Link2 } from 'lucide-react';
 import { AppLayout } from '../../layouts/AppLayout';
-import { Button } from '../../components/ui/Button';
-import { Card, CardBody, CardHeader } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
-import {
-    Flame,
-    MessageCircle,
-    Share2,
-    Bookmark,
-    MoreVertical,
-    Send,
-    Image,
-    Video,
-    BarChart2,
-    ShieldCheck,
-    Trophy,
-    Heart,
-    Pin,
-    AlertTriangle,
-    Eye,
-    Plus,
-    X,
-} from 'lucide-react';
-
-interface MediaItem {
-    id: number;
-    media_url: string;
-    media_type: 'image' | 'video' | 'clip';
-    thumbnail_url?: string;
-}
-
-interface PollOption {
-    text: string;
-    votes: number;
-}
+import { Avatar } from '../../components/ui/Avatar';
 
 interface PostItem {
     id: number;
-    uuid: string;
-    author: {
-        id: number;
-        name: string;
-        handle?: string;
-        avatar_url?: string;
-        is_verified?: boolean;
-    };
-    title?: string;
     content: string;
-    type: 'text' | 'clip' | 'livestream' | 'announcement' | 'poll';
-    visibility: string;
-    location_tag?: string;
-    hashtags: string[];
-    poll_data?: {
-        question?: string;
-        options: PollOption[];
-        voters?: Record<number, number>;
-    };
-    user_voted_option?: number | null;
-    pinned: boolean;
-    media: MediaItem[];
-    game?: { id: number; name: string; slug: string };
-    community?: { id: number; name: string; slug: string };
-    team?: { id: number; name: string; tag: string; slug: string };
-    stats: {
-        reactions_count: number;
-        comments_count: number;
-        shares_count: number;
-    };
-    user_reaction?: string | null;
-    is_bookmarked: boolean;
+    type: string;
+    sponsored: boolean;
     created_at: string;
+    author: { id: number; name: string; handle?: string; avatar_url?: string | null };
+    media: Array<{ id: number; media_url: string; media_type: string }>;
+    tournament?: { id: number; title: string } | null;
+    community?: { id: number; name: string } | null;
+    team?: { id: number; name: string } | null;
+    stats: { reactions_count: number; comments_count: number };
+    user_reaction?: string | null;
+}
+
+interface TournamentOption {
+    id: number;
+    title: string;
+}
+
+function csrfToken(): string {
+    return (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content ?? '';
+}
+
+function when(iso: string): string {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
 export default function Feed() {
-    const { auth } = usePage<any>().props;
-    const [feedType, setFeedType] = useState<'personalized' | 'explore'>('personalized');
+    const { auth } = usePage<{ auth: { user: { id: number; name: string; roles: string[]; profile?: { gamer_tag?: string; avatar_url?: string | null } } | null } }>().props;
+    const roles = auth.user?.roles ?? [];
+    const canAnnounce = roles.some((role) => ['organizer', 'super_admin'].includes(role));
+    const canSponsor = roles.some((role) => ['sponsor', 'super_admin'].includes(role));
+
     const [posts, setPosts] = useState<PostItem[]>([]);
+    const [page, setPage] = useState(1);
+    const [lastPage, setLastPage] = useState(1);
     const [loading, setLoading] = useState(true);
-
-    // Composer state
+    const [error, setError] = useState('');
     const [content, setContent] = useState('');
-    const [postType, setPostType] = useState<'text' | 'poll' | 'clip'>('text');
-    const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
-    const [locationTag, setLocationTag] = useState('');
-    const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+    const [tournamentId, setTournamentId] = useState('');
+    const [postType, setPostType] = useState<'text' | 'announcement'>('text');
+    const [sponsored, setSponsored] = useState(false);
+    const [image, setImage] = useState<File | null>(null);
+    const [tournaments, setTournaments] = useState<TournamentOption[]>([]);
     const [submitting, setSubmitting] = useState(false);
+    const [formError, setFormError] = useState('');
+    const [notice, setNotice] = useState('');
+    const [openComments, setOpenComments] = useState<number | null>(null);
+    const [comments, setComments] = useState<Record<number, Array<{ id: number; content: string; author?: { name: string }; user?: { name?: string; profile?: { avatar_url?: string | null; gamer_tag?: string | null } } }>>>({});
+    const [commentText, setCommentText] = useState('');
+    const [preview, setPreview] = useState<string | null>(null);
 
-    // Comments open per post
-    const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
-    const [commentTexts, setCommentTexts] = useState<Record<number, string>>({});
-    const [postComments, setPostComments] = useState<Record<number, any[]>>({});
-
-    // Fetch feed
-    const fetchFeed = async () => {
+    const load = async (nextPage = 1, append = false) => {
         setLoading(true);
+        setError('');
         try {
-            const res = await fetch(`/api/v1/posts?feed=${feedType}`, {
+            const res = await fetch(`/api/v1/posts?feed=personalized&per_page=10&page=${nextPage}`, {
                 headers: { Accept: 'application/json' },
             });
-            const data = await res.json();
-            if (data.data) {
-                setPosts(data.data);
+            const body = await res.json();
+            if (!res.ok) {
+                setError(res.status === 422 ? (body.message || 'The feed could not be loaded.') : 'The feed could not be loaded.');
+                return;
             }
-        } catch (err) {
-            console.error('Failed to load feed', err);
+            const rows = (body.data ?? []) as PostItem[];
+            setPosts((current) => (append ? [...current, ...rows] : rows));
+            setPage(body.meta?.current_page ?? nextPage);
+            setLastPage(body.meta?.last_page ?? 1);
+        } catch {
+            setError('The feed could not be loaded.');
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchFeed();
-    }, [feedType]);
+        load();
+        fetch('/api/v1/tournaments', { headers: { Accept: 'application/json' } })
+            .then((res) => res.json())
+            .then((body) => {
+                const rows = (body.data ?? []) as Array<{ id: number; title: string }>;
+                setTournaments(rows.map((row) => ({ id: row.id, title: row.title })));
+            })
+            .catch(() => setTournaments([]));
+    }, []);
 
-    // Handle Create Post
-    const handleCreatePost = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!content.trim()) return;
-
-        setSubmitting(true);
-        const formData = new FormData();
-        formData.append('content', content);
-        formData.append('type', postType);
-        if (locationTag) formData.append('location_tag', locationTag);
-
-        if (postType === 'poll') {
-            pollOptions.filter((opt) => opt.trim()).forEach((opt, idx) => {
-                formData.append(`poll_options[${idx}]`, opt);
-            });
+    const publish = async (event: React.FormEvent) => {
+        event.preventDefault();
+        setFormError('');
+        setNotice('');
+        if (!content.trim()) {
+            setFormError('Write something before posting.');
+            return;
         }
-
-        mediaFiles.forEach((file, idx) => {
-            formData.append(`media[${idx}]`, file);
-        });
-
+        setSubmitting(true);
+        const form = new FormData();
+        form.append('content', content.trim());
+        form.append('type', postType);
+        form.append('visibility', 'public');
+        if (tournamentId) form.append('tournament_id', tournamentId);
+        if (sponsored) form.append('sponsored', '1');
+        if (image) form.append('media[0]', image);
         try {
             const res = await fetch('/api/v1/posts', {
                 method: 'POST',
-                headers: {
-                    Accept: 'application/json',
-                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as any)?.content || '',
-                },
-                body: formData,
+                headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrfToken() },
+                body: form,
             });
-            if (res.ok) {
-                setContent('');
-                setPostType('text');
-                setPollOptions(['', '']);
-                setLocationTag('');
-                setMediaFiles([]);
-                fetchFeed();
+            const body = await res.json();
+            if (!res.ok) {
+                setFormError(body.message || 'The post was not saved.');
+                return;
             }
-        } catch (err) {
-            console.error(err);
+            setContent('');
+            setImage(null);
+            setSponsored(false);
+            setTournamentId('');
+            setNotice('Posted.');
+            await load();
+        } catch {
+            setFormError('The post was not saved.');
         } finally {
             setSubmitting(false);
         }
     };
 
-    // Reaction
-    const handleReaction = async (postId: number, reactionType: 'like' | 'fire' | 'trophy' | 'gg') => {
-        try {
-            const res = await fetch(`/api/v1/interactions/reaction/post/${postId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as any)?.content || '',
-                },
-                body: JSON.stringify({ type: reactionType }),
-            });
-            if (res.ok) {
-                fetchFeed();
-            }
-        } catch (err) {
-            console.error(err);
-        }
+    const toggleLike = async (post: PostItem) => {
+        const res = await fetch(`/api/v1/interactions/reaction/post/${post.id}`, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken(),
+            },
+            body: JSON.stringify({ type: 'like' }),
+        });
+        if (!res.ok) return;
+        const body = await res.json();
+        setPosts((current) => current.map((item) => {
+            if (item.id !== post.id) return item;
+            const liked = body.status === 'created' || body.status === 'updated';
+            const delta = body.status === 'created' ? 1 : body.status === 'removed' ? -1 : 0;
+            return {
+                ...item,
+                user_reaction: liked ? 'like' : null,
+                stats: { ...item.stats, reactions_count: Math.max(0, item.stats.reactions_count + delta) },
+            };
+        }));
     };
 
-    // Poll Vote
-    const handleVote = async (postId: number, optionIndex: number) => {
-        try {
-            const res = await fetch(`/api/v1/posts/${postId}/poll/vote`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as any)?.content || '',
-                },
-                body: JSON.stringify({ option_index: optionIndex }),
-            });
-            if (res.ok) {
-                fetchFeed();
-            }
-        } catch (err) {
-            console.error(err);
-        }
+    const openThread = async (postId: number) => {
+        setOpenComments(postId);
+        const res = await fetch(`/api/v1/posts/${postId}/comments`, { headers: { Accept: 'application/json' } });
+        const body = await res.json();
+        if (res.ok) setComments((current) => ({ ...current, [postId]: body.data ?? [] }));
     };
 
-    // Load comments
-    const toggleComments = async (postId: number) => {
-        const isOpen = !openComments[postId];
-        setOpenComments({ ...openComments, [postId]: isOpen });
-        if (isOpen && !postComments[postId]) {
-            try {
-                const res = await fetch(`/api/v1/posts/${postId}/comments`, {
-                    headers: { Accept: 'application/json' },
-                });
-                const data = await res.json();
-                setPostComments({ ...postComments, [postId]: data.data || [] });
-            } catch (err) {
-                console.error(err);
-            }
+    const sendComment = async (postId: number) => {
+        if (!commentText.trim()) return;
+        const res = await fetch(`/api/v1/posts/${postId}/comments`, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken(),
+            },
+            body: JSON.stringify({ content: commentText.trim() }),
+        });
+        const body = await res.json();
+        if (!res.ok) {
+            setFormError(body.message || 'The comment was not saved.');
+            return;
         }
+        setCommentText('');
+        setComments((current) => ({ ...current, [postId]: [...(current[postId] ?? []), body.data] }));
+        setPosts((current) => current.map((item) => item.id === postId
+            ? { ...item, stats: { ...item.stats, comments_count: item.stats.comments_count + 1 } }
+            : item));
     };
 
-    // Submit comment
-    const handleAddComment = async (postId: number) => {
-        const text = commentTexts[postId];
-        if (!text || !text.trim()) return;
+    const copyLink = async (postId: number) => {
+        const url = `${window.location.origin}/posts/${postId}`;
+        await navigator.clipboard.writeText(url);
+        setNotice('Link copied.');
+    };
 
-        try {
-            const res = await fetch(`/api/v1/posts/${postId}/comments`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as any)?.content || '',
-                },
-                body: JSON.stringify({ content: text }),
-            });
-            if (res.ok) {
-                const newComment = (await res.json()).data;
-                setPostComments({
-                    ...postComments,
-                    [postId]: [newComment, ...(postComments[postId] || [])],
-                });
-                setCommentTexts({ ...commentTexts, [postId]: '' });
-                fetchFeed();
-            }
-        } catch (err) {
-            console.error(err);
-        }
+    const remove = async (postId: number) => {
+        const res = await fetch(`/api/v1/posts/${postId}`, {
+            method: 'DELETE',
+            headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrfToken() },
+        });
+        if (res.ok) setPosts((current) => current.filter((item) => item.id !== postId));
     };
 
     return (
         <AppLayout>
-            <Head title="Gamer Feed - Campus Esports Ethiopia" />
+            <Head title="Feed" />
+            <div className="mx-auto grid max-w-6xl gap-12 px-4 py-8 lg:grid-cols-[minmax(0,40rem)_18rem]">
+                <div>
+                    <header className="mb-6">
+                        <p className="font-display text-sm text-lime-300">GameBridge</p>
+                        <h1 className="font-display text-3xl text-white">Feed</h1>
+                        <p className="mt-2 text-sm text-slate-400">Recent posts from people and communities you can actually see. Counts come from saved likes and comments.</p>
+                    </header>
 
-            <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-                {/* Feed Header & Tabs */}
-                <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                    <div>
-                        <h1 className="text-2xl font-black text-white flex items-center gap-2">
-                            <Flame className="w-6 h-6 text-orange-500" />
-                            Campus Esports Community Feed
-                        </h1>
-                        <p className="text-sm text-slate-400">
-                            Live highlights, discussions, campus rivalries, and recruitment.
-                        </p>
-                    </div>
-
-                    <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-1">
-                        <button
-                            onClick={() => setFeedType('personalized')}
-                            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
-                                feedType === 'personalized'
-                                    ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                                    : 'text-slate-400 hover:text-white'
-                            }`}
-                        >
-                            Personalized
-                        </button>
-                        <button
-                            onClick={() => setFeedType('explore')}
-                            className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
-                                feedType === 'explore'
-                                    ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                                    : 'text-slate-400 hover:text-white'
-                            }`}
-                        >
-                            Explore
-                        </button>
-                    </div>
-                </div>
-
-                {/* Post Composer */}
-                {auth.user ? (
-                    <Card className="border border-slate-800 bg-slate-900/60 backdrop-blur-sm">
-                        <CardBody className="p-4 space-y-4">
-                            <div className="flex items-start gap-3">
-                                <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm shrink-0">
-                                    {auth.user.name.substring(0, 2).toUpperCase()}
-                                </div>
-                                <div className="flex-1 space-y-3">
-                                    <textarea
-                                        value={content}
-                                        onChange={(e) => setContent(e.target.value)}
-                                        placeholder="What's happening on campus? Share clips, scrims, or start a poll (#dota2 #pubgm #fifa)..."
-                                        rows={3}
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors resize-none"
+                    <form onSubmit={publish} className="border-y border-slate-800 py-5">
+                        <div className="mb-3 flex items-center gap-3">
+                            <Avatar name={auth.user?.profile?.gamer_tag || auth.user?.name || 'You'} src={auth.user?.profile?.avatar_url} size="sm" />
+                            <p className="text-sm text-white">{auth.user?.profile?.gamer_tag || auth.user?.name}</p>
+                        </div>
+                        <label htmlFor="post-content" className="sr-only">Post</label>
+                        <textarea
+                            id="post-content"
+                            value={content}
+                            onChange={(event) => setContent(event.target.value)}
+                            rows={3}
+                            maxLength={5000}
+                            placeholder="Share a result, a scrim, or a tournament update."
+                            className="w-full resize-y bg-transparent text-base text-white outline-none placeholder:text-slate-500"
+                        />
+                        <div className="mt-3 flex flex-wrap items-center gap-3">
+                            <label className="text-sm text-slate-400">
+                                <span className="sr-only">Tournament</span>
+                                <select
+                                    value={tournamentId}
+                                    onChange={(event) => setTournamentId(event.target.value)}
+                                    className="bg-transparent text-sm text-slate-200"
+                                    aria-label="Link a tournament"
+                                >
+                                    <option value="">No tournament</option>
+                                    {tournaments.map((tournament) => (
+                                        <option key={tournament.id} value={tournament.id}>{tournament.title}</option>
+                                    ))}
+                                </select>
+                            </label>
+                            {canAnnounce && (
+                                <label className="flex items-center gap-2 text-sm text-slate-300">
+                                    <input
+                                        type="checkbox"
+                                        checked={postType === 'announcement'}
+                                        onChange={(event) => setPostType(event.target.checked ? 'announcement' : 'text')}
                                     />
+                                    Organizer announcement
+                                </label>
+                            )}
+                            {canSponsor && (
+                                <label className="flex items-center gap-2 text-sm text-slate-300">
+                                    <input type="checkbox" checked={sponsored} onChange={(event) => setSponsored(event.target.checked)} />
+                                    Sponsored
+                                </label>
+                            )}
+                            <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm text-slate-300">
+                                <ImagePlus className="h-4 w-4" aria-hidden="true" />
+                                Image
+                                <input
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    className="sr-only"
+                                    onChange={(event) => setImage(event.target.files?.[0] ?? null)}
+                                />
+                            </label>
+                            {image && <span className="text-xs text-slate-400">{image.name}</span>}
+                            <button
+                                type="submit"
+                                disabled={submitting}
+                                className="ml-auto min-h-11 bg-lime-300 px-4 text-sm font-medium text-slate-950 disabled:opacity-60"
+                            >
+                                {submitting ? 'Posting…' : 'Post'}
+                            </button>
+                        </div>
+                        {formError && <p className="mt-3 text-sm text-rose-300" role="alert">{formError}</p>}
+                        {notice && <p className="mt-3 text-sm text-lime-300" role="status">{notice}</p>}
+                    </form>
 
-                                    {/* Poll Builder */}
-                                    {postType === 'poll' && (
-                                        <div className="space-y-2 p-3 bg-slate-950/80 rounded-lg border border-slate-800">
-                                            <span className="text-xs font-semibold text-slate-300">Poll Options:</span>
-                                            {pollOptions.map((opt, idx) => (
-                                                <div key={idx} className="flex items-center gap-2">
-                                                    <input
-                                                        type="text"
-                                                        value={opt}
-                                                        onChange={(e) => {
-                                                            const updated = [...pollOptions];
-                                                            updated[idx] = e.target.value;
-                                                            setPollOptions(updated);
-                                                        }}
-                                                        placeholder={`Option ${idx + 1}`}
-                                                        className="flex-1 bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-white"
-                                                    />
-                                                    {pollOptions.length > 2 && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setPollOptions(pollOptions.filter((_, i) => i !== idx))}
-                                                            className="text-slate-500 hover:text-rose-400"
-                                                        >
-                                                            <X className="w-4 h-4" />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            ))}
-                                            {pollOptions.length < 5 && (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    type="button"
-                                                    onClick={() => setPollOptions([...pollOptions, ''])}
-                                                    className="text-xs"
-                                                >
-                                                    <Plus className="w-3.5 h-3.5 mr-1" /> Add Option
-                                                </Button>
-                                            )}
-                                        </div>
+                    {error && <p className="mt-6 text-sm text-rose-300" role="alert">{error}</p>}
+                    {loading && posts.length === 0 && <p className="mt-6 text-sm text-slate-400">Loading posts.</p>}
+                    {!loading && posts.length === 0 && (
+                        <p className="mt-8 text-sm text-slate-400">No posts yet. Publish the first note, or follow a player from their passport.</p>
+                    )}
+
+                    <ol className="divide-y divide-slate-800">
+                        {posts.map((post) => (
+                            <li key={post.id} className="py-6">
+                                <div className="flex gap-3">
+                                    <Avatar name={post.author.handle || post.author.name || 'Player'} src={post.author.avatar_url} size="sm" />
+                                    <div className="flex min-w-0 flex-1 items-baseline justify-between gap-3">
+                                    {post.author.handle ? (
+                                        <Link href={`/players/${post.author.handle}`} className="font-medium text-white hover:underline">{post.author.handle}</Link>
+                                    ) : (
+                                        <span className="font-medium text-white">{post.author.name}</span>
                                     )}
-
-                                    {/* Action Bar */}
-                                    <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
-                                        <div className="flex items-center gap-2">
-                                            <label className="cursor-pointer p-2 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-emerald-400 transition-colors">
-                                                <Image className="w-4 h-4" />
-                                                <input
-                                                    type="file"
-                                                    accept="image/*,video/*"
-                                                    multiple
-                                                    className="hidden"
-                                                    onChange={(e) => {
-                                                        if (e.target.files) {
-                                                            setMediaFiles(Array.from(e.target.files));
-                                                        }
-                                                    }}
-                                                />
-                                            </label>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => setPostType(postType === 'poll' ? 'text' : 'poll')}
-                                                className={`p-2 rounded-lg transition-colors ${
-                                                    postType === 'poll'
-                                                        ? 'bg-emerald-500/20 text-emerald-400'
-                                                        : 'bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-emerald-400'
-                                                }`}
-                                                title="Add Poll"
-                                            >
-                                                <BarChart2 className="w-4 h-4" />
-                                            </button>
-
-                                            <input
-                                                type="text"
-                                                value={locationTag}
-                                                onChange={(e) => setLocationTag(e.target.value)}
-                                                placeholder="Location (e.g. AAU 4 Kilo)"
-                                                className="bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-300 w-36"
-                                            />
-
-                                            {mediaFiles.length > 0 && (
-                                                <span className="text-[11px] text-emerald-400 font-semibold">
-                                                    {mediaFiles.length} file(s) attached
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        <Button
-                                            variant="primary"
-                                            size="sm"
-                                            disabled={submitting || !content.trim()}
-                                            onClick={handleCreatePost}
-                                            className="px-4"
-                                        >
-                                            <Send className="w-3.5 h-3.5 mr-1.5" />
-                                            {submitting ? 'Posting...' : 'Post'}
-                                        </Button>
+                                    <time className="text-xs text-slate-500" dateTime={post.created_at}>{when(post.created_at)}</time>
                                     </div>
                                 </div>
-                            </div>
-                        </CardBody>
-                    </Card>
-                ) : (
-                    <div className="p-4 rounded-xl border border-slate-800 bg-slate-900 text-center">
-                        <p className="text-sm text-slate-400">
-                            <a href="/login" className="text-emerald-400 font-bold hover:underline">
-                                Log in
-                            </a>{' '}
-                            or{' '}
-                            <a href="/register" className="text-emerald-400 font-bold hover:underline">
-                                sign up
-                            </a>{' '}
-                            to post, react, and connect with campus gamers.
-                        </p>
-                    </div>
-                )}
-
-                {/* Posts List */}
-                {loading ? (
-                    <div className="py-12 text-center text-slate-500 text-sm">Loading feed...</div>
-                ) : posts.length === 0 ? (
-                    <div className="py-16 text-center border border-slate-800/80 rounded-xl bg-slate-900/30">
-                        <Flame className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-                        <h3 className="text-base font-bold text-slate-200">No posts yet</h3>
-                        <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                            Be the first gamer to share your match clip, university news, or banter!
-                        </p>
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        {posts.map((post) => {
-                            const totalVotes =
-                                post.poll_data?.options?.reduce((acc, opt) => acc + (opt.votes || 0), 0) || 0;
-
-                            return (
-                                <Card
-                                    key={post.id}
-                                    className="border border-slate-800/80 bg-slate-900/70 backdrop-blur-sm overflow-hidden"
-                                >
-                                    <CardBody className="p-5 space-y-4">
-                                        {/* Post Author & Header */}
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center font-bold text-slate-950 text-sm">
-                                                    {post.author.name.substring(0, 2).toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="font-bold text-sm text-white">
-                                                            {post.author.name}
-                                                        </span>
-                                                        {post.author.is_verified && (
-                                                            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                                                        )}
-                                                        {post.author.handle && (
-                                                            <span className="text-xs text-slate-400">
-                                                                @{post.author.handle}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                                                        <span>{new Date(post.created_at).toLocaleDateString()}</span>
-                                                        {post.location_tag && <span>• {post.location_tag}</span>}
-                                                        {post.game && (
-                                                            <Badge variant="outline" className="text-[10px] py-0 px-1.5">
-                                                                {post.game.name}
-                                                            </Badge>
-                                                        )}
-                                                        {post.pinned && (
-                                                            <span className="flex items-center gap-1 text-amber-400 font-semibold">
-                                                                <Pin className="w-3 h-3" /> Pinned
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
+                                <div className="pl-12">
+                                <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-400">
+                                    {post.sponsored && <span className="text-lime-300">Sponsored</span>}
+                                    {post.type === 'announcement' && <span>Announcement</span>}
+                                    {post.team && <span>{post.team.name}</span>}
+                                    {post.community && <Link href={`/communities/${post.community.id}`}>{post.community.name}</Link>}
+                                </div>
+                                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-100">{post.content}</p>
+                                {post.tournament && (
+                                    <Link href={`/tournaments/${post.tournament.id}`} className="mt-3 inline-block text-sm text-lime-300 hover:underline">
+                                        {post.tournament.title}
+                                    </Link>
+                                )}
+                                {post.media.filter((file) => file.media_type === 'image').map((file) => (
+                                    <button key={file.id} type="button" onClick={() => setPreview(file.media_url)} className="mt-3 block w-full">
+                                        <img src={file.media_url} alt="" className="max-h-[32rem] w-full object-cover" />
+                                    </button>
+                                ))}
+                                <div className="mt-4 flex flex-wrap items-center gap-2">
+                                    <button type="button" onClick={() => toggleLike(post)} className="inline-flex min-h-11 items-center gap-2 px-2 text-sm text-slate-300">
+                                        <Heart className={`h-4 w-4 ${post.user_reaction === 'like' ? 'fill-lime-300 text-lime-300' : ''}`} aria-hidden="true" />
+                                        {post.stats.reactions_count} likes
+                                    </button>
+                                    <button type="button" onClick={() => openThread(post.id)} className="inline-flex min-h-11 items-center gap-2 px-2 text-sm text-slate-300">
+                                        <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                                        {post.stats.comments_count} comments
+                                    </button>
+                                    <button type="button" onClick={() => copyLink(post.id)} className="inline-flex min-h-11 items-center gap-2 px-2 text-sm text-slate-300">
+                                        <Link2 className="h-4 w-4" aria-hidden="true" />
+                                        Copy link
+                                    </button>
+                                    {auth.user?.id === post.author.id && (
+                                        <button type="button" onClick={() => remove(post.id)} className="min-h-11 px-2 text-sm text-rose-300">Delete</button>
+                                    )}
+                                </div>
+                                {openComments === post.id && (
+                                    <div className="mt-3 space-y-3 border-l border-slate-800 pl-4">
+                                        {(comments[post.id] ?? []).map((comment) => (
+                                            <div key={comment.id} className="flex gap-2 text-sm text-slate-200">
+                                                <Avatar name={comment.user?.profile?.gamer_tag || comment.user?.name || comment.author?.name || 'Player'} src={comment.user?.profile?.avatar_url} size="sm" />
+                                                <p>
+                                                    <span className="text-slate-400">{comment.user?.profile?.gamer_tag || comment.user?.name || comment.author?.name || 'Player'}</span>
+                                                    <span className="mt-1 block">{comment.content}</span>
+                                                </p>
                                             </div>
-                                        </div>
-
-                                        {/* Post Content */}
-                                        <div className="text-sm text-slate-200 leading-relaxed whitespace-pre-line">
-                                            {post.content}
-                                        </div>
-
-                                        {/* Hashtags */}
-                                        {post.hashtags?.length > 0 && (
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {post.hashtags.map((tag, idx) => (
-                                                    <span key={idx} className="text-xs text-emerald-400 font-medium hover:underline cursor-pointer">
-                                                        #{tag}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Poll Display */}
-                                        {post.type === 'poll' && post.poll_data?.options && (
-                                            <div className="space-y-2 p-3 rounded-lg bg-slate-950/70 border border-slate-800">
-                                                <div className="text-xs font-semibold text-slate-400">
-                                                    Poll • {totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}
-                                                </div>
-                                                {post.poll_data.options.map((opt, idx) => {
-                                                    const pct = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
-                                                    const isSelected = post.user_voted_option === idx;
-
-                                                    return (
-                                                        <button
-                                                            key={idx}
-                                                            disabled={!auth.user || post.user_voted_option !== null}
-                                                            onClick={() => handleVote(post.id, idx)}
-                                                            className={`w-full relative overflow-hidden text-left p-2.5 rounded-lg border text-xs font-medium transition-all ${
-                                                                isSelected
-                                                                    ? 'border-emerald-500 bg-emerald-950/30 text-white'
-                                                                    : 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700'
-                                                            }`}
-                                                        >
-                                                            <div
-                                                                className="absolute top-0 left-0 bottom-0 bg-emerald-500/20"
-                                                                style={{ width: `${pct}%` }}
-                                                            />
-                                                            <div className="relative z-10 flex items-center justify-between">
-                                                                <span>{opt.text}</span>
-                                                                <span className="font-bold">{pct}%</span>
-                                                            </div>
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-
-                                        {/* Media Attachments */}
-                                        {post.media?.length > 0 && (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-lg overflow-hidden">
-                                                {post.media.map((m) => (
-                                                    <div key={m.id} className="relative aspect-video bg-black rounded-lg overflow-hidden border border-slate-800">
-                                                        {m.media_type === 'video' ? (
-                                                            <video src={m.media_url} controls className="w-full h-full object-contain" />
-                                                        ) : (
-                                                            <img src={m.media_url} alt="Attachment" className="w-full h-full object-cover" />
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Action Buttons: Reactions, Comments, Share, Bookmark */}
-                                        <div className="flex items-center justify-between pt-3 border-t border-slate-800/80 text-xs text-slate-400">
-                                            <div className="flex items-center gap-1 sm:gap-2">
-                                                <button
-                                                    onClick={() => handleReaction(post.id, 'fire')}
-                                                    className={`px-2 py-1 rounded flex items-center gap-1 transition-colors ${
-                                                        post.user_reaction === 'fire'
-                                                            ? 'bg-orange-500/20 text-orange-400 font-bold'
-                                                            : 'hover:bg-slate-800 text-slate-400'
-                                                    }`}
-                                                    title="Fire"
-                                                >
-                                                    <Flame className="w-4 h-4 text-orange-400" />
-                                                    <span>{post.stats.reactions_count}</span>
-                                                </button>
-
-                                                <button
-                                                    onClick={() => handleReaction(post.id, 'trophy')}
-                                                    className={`px-2 py-1 rounded flex items-center gap-1 transition-colors ${
-                                                        post.user_reaction === 'trophy'
-                                                            ? 'bg-amber-500/20 text-amber-400 font-bold'
-                                                            : 'hover:bg-slate-800 text-slate-400'
-                                                    }`}
-                                                    title="Trophy"
-                                                >
-                                                    <Trophy className="w-4 h-4 text-amber-400" />
-                                                </button>
-
-                                                <button
-                                                    onClick={() => toggleComments(post.id)}
-                                                    className="px-2 py-1 rounded flex items-center gap-1 hover:bg-slate-800 text-slate-400 transition-colors"
-                                                >
-                                                    <MessageCircle className="w-4 h-4 text-blue-400" />
-                                                    <span>{post.stats.comments_count}</span>
-                                                </button>
-                                            </div>
-
-                                            <div className="flex items-center gap-1">
-                                                <button
-                                                    onClick={async () => {
-                                                        await fetch(`/api/v1/interactions/bookmark/post/${post.id}`, {
-                                                            method: 'POST',
-                                                            headers: {
-                                                                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as any)?.content || '',
-                                                            },
-                                                        });
-                                                        fetchFeed();
-                                                    }}
-                                                    className={`p-1.5 rounded transition-colors ${
-                                                        post.is_bookmarked
-                                                            ? 'text-emerald-400 bg-emerald-500/10'
-                                                            : 'hover:bg-slate-800 text-slate-400'
-                                                    }`}
-                                                    title="Bookmark"
-                                                >
-                                                    <Bookmark className="w-4 h-4" />
-                                                </button>
-
-                                                <button
-                                                    onClick={async () => {
-                                                        await fetch(`/api/v1/interactions/share/post/${post.id}`, {
-                                                            method: 'POST',
-                                                            headers: {
-                                                                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as any)?.content || '',
-                                                            },
-                                                        });
-                                                        fetchFeed();
-                                                    }}
-                                                    className="p-1.5 rounded hover:bg-slate-800 text-slate-400 transition-colors"
-                                                    title="Share"
-                                                >
-                                                    <Share2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Comments Drawer */}
-                                        {openComments[post.id] && (
-                                            <div className="pt-3 border-t border-slate-800/60 space-y-3">
-                                                {auth.user && (
-                                                    <div className="flex items-center gap-2">
-                                                        <input
-                                                            type="text"
-                                                            value={commentTexts[post.id] || ''}
-                                                            onChange={(e) =>
-                                                                setCommentTexts({
-                                                                    ...commentTexts,
-                                                                    [post.id]: e.target.value,
-                                                                })
-                                                            }
-                                                            placeholder="Write a comment..."
-                                                            className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
-                                                        />
-                                                        <Button
-                                                            size="sm"
-                                                            onClick={() => handleAddComment(post.id)}
-                                                            className="text-xs"
-                                                        >
-                                                            Reply
-                                                        </Button>
-                                                    </div>
-                                                )}
-
-                                                <div className="space-y-2">
-                                                    {(postComments[post.id] || []).map((c: any) => (
-                                                        <div
-                                                            key={c.id}
-                                                            className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800/80 text-xs space-y-1"
-                                                        >
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="font-bold text-slate-200">
-                                                                    {c.user?.name}
-                                                                </span>
-                                                                <span className="text-[10px] text-slate-500">
-                                                                    {new Date(c.created_at).toLocaleTimeString([], {
-                                                                        hour: '2-digit',
-                                                                        minute: '2-digit',
-                                                                    })}
-                                                                </span>
-                                                            </div>
-                                                            <p className="text-slate-300">{c.content}</p>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </CardBody>
-                                </Card>
-                            );
-                        })}
-                    </div>
-                )}
+                                        ))}
+                                        <form
+                                            className="flex gap-2"
+                                            onSubmit={(event) => {
+                                                event.preventDefault();
+                                                sendComment(post.id);
+                                            }}
+                                        >
+                                            <label className="sr-only" htmlFor={`comment-${post.id}`}>Comment</label>
+                                            <input
+                                                id={`comment-${post.id}`}
+                                                value={commentText}
+                                                onChange={(event) => setCommentText(event.target.value)}
+                                                className="min-h-11 flex-1 border border-slate-700 bg-transparent px-3 text-sm"
+                                            />
+                                            <button type="submit" className="min-h-11 px-3 text-sm text-lime-300">Reply</button>
+                                        </form>
+                                    </div>
+                                )}
+                                </div>
+                            </li>
+                        ))}
+                    </ol>
+                    {page < lastPage && (
+                        <button type="button" onClick={() => load(page + 1, true)} className="mt-4 min-h-11 text-sm text-lime-300">
+                            {loading ? 'Loading…' : 'Older posts'}
+                        </button>
+                    )}
+                </div>
+                <aside className="hidden lg:block">
+                    <p className="font-display text-sm text-lime-300">Open competitions</p>
+                    {tournaments.length === 0 ? (
+                        <p className="mt-4 text-sm text-slate-500">No published competitions are listed.</p>
+                    ) : (
+                        <ul className="mt-4 divide-y divide-slate-800 border-y border-slate-800">
+                            {tournaments.slice(0, 5).map((tournament) => (
+                                <li key={tournament.id}>
+                                    <Link href={`/tournaments/${tournament.id}`} className="block py-3 text-sm text-white hover:text-lime-300">
+                                        {tournament.title}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    <p className="mt-6 text-sm text-slate-500">A like does not change a ranking.</p>
+                </aside>
             </div>
+            {preview && (
+                <button type="button" className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setPreview(null)}>
+                    <img src={preview} alt="" className="max-h-[90vh] max-w-full object-contain" />
+                </button>
+            )}
         </AppLayout>
     );
 }

@@ -74,7 +74,7 @@ export default function EducationIndex() {
     const [courses, setCourses] = useState<Course[]>([]);
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const [loading, setLoading] = useState(true);
-    const [locale, setLocale] = useState<'en' | 'am'>('en');
+    const [locale] = useState<'en' | 'am'>('en');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [selectedLevel, setSelectedLevel] = useState<string>('all');
@@ -159,21 +159,6 @@ export default function EducationIndex() {
 
                         {/* Top Action Pills: Dashboard & Lang Selector */}
                         <div className="flex flex-wrap items-center gap-3">
-                            <div className="flex items-center bg-slate-800/80 rounded-xl p-1 border border-slate-700">
-                                <button
-                                    onClick={() => setLocale('en')}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${locale === 'en' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-                                >
-                                    English
-                                </button>
-                                <button
-                                    onClick={() => setLocale('am')}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${locale === 'am' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-                                >
-                                    አማርኛ
-                                </button>
-                            </div>
-
                             <Link href="/education/dashboard">
                                 <Button className="bg-gradient-to-r from-amber-500 to-orange-600 text-white font-medium shadow hover:opacity-90">
                                     <Flame className="w-4 h-4 mr-2 text-white" />

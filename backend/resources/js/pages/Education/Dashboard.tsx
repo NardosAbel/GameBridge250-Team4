@@ -234,11 +234,15 @@ export default function EducationDashboard() {
                                         </p>
                                     </div>
 
-                                    <Link href={`/education/courses/${assign.learningPath.courses?.[0]?.id || 1}`}>
-                                        <Button size="sm" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white">
-                                            Start Assigned Curriculum
-                                        </Button>
-                                    </Link>
+                                    {assign.learningPath.courses?.[0]?.id ? (
+                                        <Link href={`/education/courses/${assign.learningPath.courses[0].id}`}>
+                                            <Button size="sm" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white">
+                                                Start Assigned Curriculum
+                                            </Button>
+                                        </Link>
+                                    ) : (
+                                        <p className="text-xs text-slate-400">No course is attached to this assignment.</p>
+                                    )}
                                 </div>
                             ))}
                         </div>

@@ -132,10 +132,11 @@ Route::prefix('v1')->group(function () {
         Route::prefix('profile')->group(function () {
             Route::get('/', [ProfileController::class, 'show']);
             Route::put('/', [ProfileController::class, 'update']);
+            Route::post('/avatar', [ProfileController::class, 'updateAvatar']);
         });
 
         // Posts & Social Feed
-        Route::post('/posts', [PostController::class, 'store']);
+        Route::post('/posts', [PostController::class, 'store'])->middleware('throttle:12,1');
         Route::delete('/posts/{post}', [PostController::class, 'destroy']);
         Route::post('/posts/{post}/poll/vote', [PostController::class, 'votePoll']);
         Route::post('/posts/{post}/pin', [PostController::class, 'pin']);
@@ -173,8 +174,11 @@ Route::prefix('v1')->group(function () {
 
         // Team & Community Chat
         Route::prefix('chat')->group(function () {
+            Route::get('/mine', [ChatController::class, 'mine']);
             Route::get('/teams/{team}', [ChatController::class, 'teamChannel']);
             Route::get('/communities/{community}', [ChatController::class, 'communityChannel']);
+            Route::get('/communities/{community}/channels', [ChatController::class, 'communityChannels']);
+            Route::post('/communities/{community}/channels', [ChatController::class, 'storeCommunityChannel']);
             Route::get('/channels/{channel}/messages', [ChatController::class, 'messages']);
             Route::post('/channels/{channel}/messages', [ChatController::class, 'sendMessage']);
         });
@@ -202,6 +206,7 @@ Route::prefix('v1')->group(function () {
             Route::delete('/{tournament}', [TournamentController::class, 'destroy']);
             Route::put('/{tournament}/status', [TournamentController::class, 'updateStatus']);
             Route::post('/{tournament}/register', [TournamentController::class, 'register']);
+            Route::post('/{tournament}/registrations/{registration}/review', [TournamentController::class, 'reviewRegistration']);
             Route::post('/{tournament}/check-in', [TournamentController::class, 'checkIn']);
             Route::put('/{tournament}/seeding', [TournamentController::class, 'updateSeeding']);
             Route::post('/{tournament}/bracket', [TournamentController::class, 'generateBracket']);

@@ -5,6 +5,7 @@ namespace App\Domain\Social\Models;
 use App\Domain\Communities\Models\Community;
 use App\Domain\Profiles\Models\Game;
 use App\Domain\Teams\Models\Team;
+use App\Domain\Tournaments\Models\Tournament;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -24,6 +25,7 @@ class Post extends Model
         'community_id',
         'team_id',
         'game_id',
+        'tournament_id',
         'title',
         'content',
         'type', // text, clip, livestream, announcement, poll
@@ -32,6 +34,7 @@ class Post extends Model
         'poll_data',
         'visibility', // public, community, team
         'pinned',
+        'sponsored',
         'shares_count',
         'views_count',
     ];
@@ -51,6 +54,7 @@ class Post extends Model
             'hashtags' => 'array',
             'poll_data' => 'array',
             'pinned' => 'boolean',
+            'sponsored' => 'boolean',
             'shares_count' => 'integer',
             'views_count' => 'integer',
         ];
@@ -74,6 +78,11 @@ class Post extends Model
     public function game(): BelongsTo
     {
         return $this->belongsTo(Game::class);
+    }
+
+    public function tournament(): BelongsTo
+    {
+        return $this->belongsTo(Tournament::class);
     }
 
     public function media(): HasMany

@@ -1,41 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { AppLayout } from '../../layouts/AppLayout';
+import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
-import { Card, CardBody, CardHeader } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
-import {
-    Users,
-    Shield,
-    MessageSquare,
-    UserPlus,
-    Trophy,
-    GraduationCap,
-    MapPin,
-    Crown,
-    Settings,
-    Clock,
-    UserMinus,
-    ArrowRightLeft,
-} from 'lucide-react';
 
 interface TeamMemberItem {
     id: number;
     user_id: number;
     name: string;
     handle?: string;
-    avatar_url?: string;
-    role: 'owner' | 'captain' | 'coach' | 'manager' | 'player' | 'substitute';
-    status: string;
+    avatar_url?: string | null;
+    role: string;
     joined_at: string;
 }
 
-interface RosterHistoryItem {
+interface PendingRequest {
     id: number;
-    action: string;
-    role: string;
-    user: { id: number; name: string };
-    created_at: string;
+    message?: string | null;
+    user?: { id: number; name: string; gamer_tag?: string | null };
 }
 
 interface TeamDetail {
@@ -46,36 +28,38 @@ interface TeamDetail {
     university?: string;
     location?: string;
     recruitment_status: string;
-    achievements: string[];
-    is_active: boolean;
-    leader?: { id: number; name: string; handle?: string };
-    game?: { id: number; name: string; slug: string };
+    game?: { name: string };
+    leader?: { id: number; name: string };
     members: TeamMemberItem[];
-    roster_history: RosterHistoryItem[];
+    roster_history: Array<{ id: number; action: string; role: string; user?: { name: string }; created_at: string }>;
+    viewer_request?: { id: number; status: string } | null;
+    pending_requests?: PendingRequest[];
 }
 
 export default function TeamShow({ teamId }: { teamId: number }) {
     const { auth } = usePage<any>().props;
     const [team, setTeam] = useState<TeamDetail | null>(null);
     const [loading, setLoading] = useState(true);
-
-    // Apply or Invite state
-    const [applyMessage, setApplyMessage] = useState('');
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [message, setMessage] = useState('');
     const [applying, setApplying] = useState(false);
-    const [actionMsg, setActionMsg] = useState('');
+    const [feedback, setFeedback] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     const fetchTeam = async () => {
         setLoading(true);
+        setLoadError(null);
         try {
-            const res = await fetch(`/api/v1/teams/${teamId}`, {
-                headers: { Accept: 'application/json' },
-            });
+            const res = await fetch(`/api/v1/teams/${teamId}`, { headers: { Accept: 'application/json' } });
             const data = await res.json();
-            if (data.data) {
-                setTeam(data.data);
+            if (!res.ok || !data.data) {
+                setTeam(null);
+                setLoadError(data.message || 'This team could not be loaded.');
+                return;
             }
-        } catch (err) {
-            console.error(err);
+            setTeam(data.data);
+        } catch {
+            setLoadError('This team could not be loaded.');
         } finally {
             setLoading(false);
         }
@@ -85,260 +69,178 @@ export default function TeamShow({ teamId }: { teamId: number }) {
         fetchTeam();
     }, [teamId]);
 
-    const handleApply = async () => {
+    const csrf = () => (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content || '';
+
+    const handleApply = async (event: React.FormEvent) => {
+        event.preventDefault();
         if (!auth.user) return;
         setApplying(true);
+        setError(null);
+        setFeedback(null);
         try {
             const res = await fetch(`/api/v1/teams/${teamId}/invite`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Accept: 'application/json',
-                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as any)?.content || '',
+                    'X-CSRF-TOKEN': csrf(),
                 },
                 body: JSON.stringify({
                     user_id: auth.user.id,
                     type: 'join_request',
                     role: 'player',
-                    message: applyMessage,
+                    message,
                 }),
             });
-            if (res.ok) {
-                setActionMsg('Join application submitted to team captain!');
-                setApplyMessage('');
+            const data = await res.json();
+            if (!res.ok) {
+                setError(data.message || 'The application was not saved.');
+                return;
             }
-        } catch (err) {
-            console.error(err);
+            setFeedback('Application sent. The captain still has to accept it.');
+            setMessage('');
+            fetchTeam();
+        } catch {
+            setError('The application was not saved.');
         } finally {
             setApplying(false);
         }
     };
 
-    const isMember = team?.members.some((m) => m.user_id === auth.user?.id);
-    const isLeader = team?.leader?.id === auth.user?.id;
+    const review = async (invitationId: number, response: 'accepted' | 'declined') => {
+        setError(null);
+        setFeedback(null);
+        const res = await fetch(`/api/v1/team-invitations/${invitationId}/respond`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': csrf(),
+            },
+            body: JSON.stringify({ response }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            setError(data.message || 'That decision was not saved.');
+            return;
+        }
+        setFeedback(response === 'accepted' ? 'Player added to the roster.' : 'Application declined.');
+        fetchTeam();
+    };
 
-    if (loading || !team) {
+    if (loading) {
+        return <AppLayout><p className="max-w-3xl mx-auto px-4 py-16 text-sm text-slate-300" role="status">Loading team.</p></AppLayout>;
+    }
+
+    if (loadError || !team) {
         return (
             <AppLayout>
-                <div className="py-24 text-center text-slate-500">Loading team profile...</div>
+                <div className="max-w-3xl mx-auto px-4 py-16">
+                    <h1 className="text-xl font-semibold text-white">Team unavailable</h1>
+                    <p className="mt-2 text-sm text-slate-300">{loadError}</p>
+                </div>
             </AppLayout>
         );
     }
 
+    const isMember = team.members.some((member) => member.user_id === auth.user?.id);
+    const isLeader = team.leader?.id === auth.user?.id;
+    const recruiting = team.recruitment_status !== 'closed';
+    const pending = team.viewer_request?.status === 'pending';
+
     return (
         <AppLayout>
-            <Head title={`${team.name} [${team.tag}] - Campus Esports Ethiopia`} />
+            <Head title={`${team.name} — GameBridge`} />
+            <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
+                <header className="border-b border-slate-800 pb-6">
+                    <p className="font-display text-sm text-lime-300">{team.tag}</p>
+                    <h1 className="mt-2 font-display text-4xl text-white">{team.name}</h1>
+                    <p className="mt-2 text-sm text-slate-300">
+                        {team.game?.name ? `${team.game.name} · ` : ''}
+                        {team.university || 'No campus listed'}
+                        {team.location ? ` · ${team.location}` : ''}
+                        {` · ${team.recruitment_status.replace(/_/g, ' ')}`}
+                    </p>
+                    {team.bio && <p className="mt-4 max-w-2xl text-sm leading-relaxed text-slate-300">{team.bio}</p>}
+                </header>
 
-            <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-                {/* Team Hero Header */}
-                <div className="relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-900/80 p-6 md:p-8 backdrop-blur-sm">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div className="flex items-center gap-5">
-                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-amber-500 flex items-center justify-center font-black text-slate-950 text-2xl shadow-xl">
-                                {team.tag}
-                            </div>
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-3">
-                                    <h1 className="text-2xl md:text-3xl font-black text-white">
-                                        {team.name}
-                                    </h1>
-                                    <Badge variant="outline" className="text-xs uppercase font-mono">
-                                        [{team.tag}]
-                                    </Badge>
-                                </div>
-                                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-                                    {team.university && (
-                                        <span className="flex items-center gap-1">
-                                            <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
-                                            {team.university}
-                                        </span>
-                                    )}
-                                    {team.location && (
-                                        <span className="flex items-center gap-1">
-                                            <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                                            {team.location}
-                                        </span>
-                                    )}
-                                    <span className="capitalize text-emerald-400 font-semibold">
-                                        Recruitment: {team.recruitment_status.replace('_', ' ')}
+                {feedback && <p className="text-sm text-amber-200" role="status">{feedback}</p>}
+                {error && <p className="text-sm text-rose-300" role="alert">{error}</p>}
+
+                {!auth.user && recruiting && (
+                    <Link href="/login" className="inline-flex min-h-11 items-center text-sm text-amber-200 underline-offset-4 hover:underline">Sign in to apply</Link>
+                )}
+
+                {auth.user && !isMember && !isLeader && recruiting && !pending && (
+                    <form onSubmit={handleApply} className="space-y-3 border-b border-slate-800 pb-6">
+                        <label htmlFor="apply-note" className="block text-sm text-slate-200">Note for the captain</label>
+                        <textarea
+                            id="apply-note"
+                            value={message}
+                            onChange={(event) => setMessage(event.target.value)}
+                            maxLength={500}
+                            rows={3}
+                            className="w-full border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white"
+                        />
+                        <Button type="submit" variant="primary" disabled={applying}>
+                            {applying ? 'Sending…' : 'Apply to join'}
+                        </Button>
+                    </form>
+                )}
+
+                {pending && <p className="text-sm text-slate-200" role="status">Your application is pending.</p>}
+                {isMember && <p className="text-sm text-slate-200">You are on this roster.</p>}
+                {!recruiting && !isMember && <p className="text-sm text-slate-300">This roster is closed.</p>}
+
+                {(team.pending_requests?.length ?? 0) > 0 && (
+                    <section>
+                        <h2 className="text-base font-semibold text-white">Applications</h2>
+                        <ul className="mt-3 divide-y divide-slate-800 border-y border-slate-800">
+                            {team.pending_requests?.map((request) => (
+                                <li key={request.id} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <p className="text-sm text-white">{request.user?.gamer_tag || request.user?.name}</p>
+                                        {request.message && <p className="text-sm text-slate-400">{request.message}</p>}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button type="button" variant="primary" onClick={() => review(request.id, 'accepted')}>Accept</Button>
+                                        <Button type="button" variant="outline" onClick={() => review(request.id, 'declined')}>Decline</Button>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
+
+                <section>
+                    <h2 className="text-base font-semibold text-white">Roster</h2>
+                    {team.members.length === 0 ? (
+                        <p className="mt-2 text-sm text-slate-400">No active players are listed.</p>
+                    ) : (
+                        <ul className="mt-3 divide-y divide-slate-800 border-y border-slate-800">
+                            {team.members.map((member) => (
+                                <li key={member.id} className="flex items-center justify-between gap-3 py-3 text-sm">
+                                    <span className="flex items-center gap-3 text-white">
+                                        <Avatar name={member.handle || member.name} src={member.avatar_url} size="sm" />
+                                        {member.handle || member.name}
                                     </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Top CTA */}
-                        <div className="flex items-center gap-3">
-                            <Link href="/chat">
-                                <Button variant="outline" size="sm" className="flex items-center gap-1.5">
-                                    <MessageSquare className="w-4 h-4 text-blue-400" /> Team Chat
-                                </Button>
-                            </Link>
-
-                            {!isMember && auth.user && team.recruitment_status !== 'closed' && (
-                                <Button
-                                    variant="primary"
-                                    size="sm"
-                                    onClick={handleApply}
-                                    disabled={applying}
-                                    className="flex items-center gap-1.5"
-                                >
-                                    <UserPlus className="w-4 h-4" /> {applying ? 'Submitting...' : 'Apply to Roster'}
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-
-                    {actionMsg && (
-                        <div className="mt-4 p-3 rounded-lg bg-emerald-950/40 border border-emerald-800 text-xs text-emerald-300">
-                            {actionMsg}
-                        </div>
+                                    <span className="capitalize text-slate-400">{member.role}</span>
+                                </li>
+                            ))}
+                        </ul>
                     )}
-                </div>
+                </section>
 
-                {/* Team Bio & Achievements */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="md:col-span-2 space-y-6">
-                        {/* Roster Card */}
-                        <Card className="border border-slate-800 bg-slate-900/70">
-                            <CardHeader className="p-4 border-b border-slate-800 flex items-center justify-between">
-                                <h3 className="font-bold text-white text-base flex items-center gap-2">
-                                    <Users className="w-5 h-5 text-emerald-400" />
-                                    Active Roster ({team.members.length})
-                                </h3>
-                                <Badge variant="outline" className="text-xs">
-                                    Roles: Captain, Coach, Manager, Player, Sub
-                                </Badge>
-                            </CardHeader>
-                            <CardBody className="p-4">
-                                <div className="divide-y divide-slate-800/80">
-                                    {team.members.map((member) => (
-                                        <div
-                                            key={member.id}
-                                            className="py-3 flex items-center justify-between first:pt-0 last:pb-0"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center font-bold text-xs text-slate-300">
-                                                    {member.name.substring(0, 2).toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="text-sm font-bold text-white">
-                                                            {member.name}
-                                                        </span>
-                                                        {member.role === 'owner' && (
-                                                            <Crown className="w-3.5 h-3.5 text-amber-400" />
-                                                        )}
-                                                    </div>
-                                                    <span className="text-[11px] text-slate-400">
-                                                        Joined {new Date(member.joined_at).toLocaleDateString()}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <Badge
-                                                variant={
-                                                    member.role === 'owner' || member.role === 'captain'
-                                                        ? 'warning'
-                                                        : member.role === 'coach' || member.role === 'manager'
-                                                        ? 'info'
-                                                        : 'outline'
-                                                }
-                                                className="text-xs uppercase font-mono"
-                                            >
-                                                {member.role}
-                                            </Badge>
-                                        </div>
-                                    ))}
-                                </div>
-                            </CardBody>
-                        </Card>
-
-                        {/* Roster History Timeline */}
-                        <Card className="border border-slate-800 bg-slate-900/70">
-                            <CardHeader className="p-4 border-b border-slate-800">
-                                <h3 className="font-bold text-white text-base flex items-center gap-2">
-                                    <Clock className="w-5 h-5 text-teal-400" />
-                                    Roster History & Transfers
-                                </h3>
-                            </CardHeader>
-                            <CardBody className="p-4">
-                                {team.roster_history?.length === 0 ? (
-                                    <p className="text-xs text-slate-500">No transfer history recorded yet.</p>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {team.roster_history.map((h) => (
-                                            <div
-                                                key={h.id}
-                                                className="flex items-center justify-between text-xs p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80"
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    <ArrowRightLeft className="w-3.5 h-3.5 text-emerald-400" />
-                                                    <span className="font-semibold text-white">
-                                                        {h.user?.name}
-                                                    </span>
-                                                    <span className="text-slate-400">
-                                                        {h.action} as <strong className="text-slate-200">{h.role}</strong>
-                                                    </span>
-                                                </div>
-                                                <span className="text-[10px] text-slate-500">
-                                                    {new Date(h.created_at).toLocaleDateString()}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </CardBody>
-                        </Card>
-                    </div>
-
-                    {/* Sidebar: Bio & Achievements */}
-                    <div className="space-y-6">
-                        <Card className="border border-slate-800 bg-slate-900/70">
-                            <CardHeader className="p-4 border-b border-slate-800">
-                                <h3 className="font-bold text-white text-sm">About Team</h3>
-                            </CardHeader>
-                            <CardBody className="p-4 space-y-3 text-xs text-slate-300">
-                                <p className="leading-relaxed">
-                                    {team.bio || 'No official team biography published yet.'}
-                                </p>
-
-                                <div className="pt-3 border-t border-slate-800 space-y-2">
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-400">Status</span>
-                                        <span className="text-emerald-400 font-semibold">Active Roster</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-400">Campus</span>
-                                        <span className="text-white">{team.university || 'Independent'}</span>
-                                    </div>
-                                </div>
-                            </CardBody>
-                        </Card>
-
-                        <Card className="border border-slate-800 bg-slate-900/70">
-                            <CardHeader className="p-4 border-b border-slate-800 flex items-center justify-between">
-                                <h3 className="font-bold text-white text-sm flex items-center gap-1.5">
-                                    <Trophy className="w-4 h-4 text-amber-400" /> Trophy Room
-                                </h3>
-                            </CardHeader>
-                            <CardBody className="p-4">
-                                {team.achievements?.length > 0 ? (
-                                    <div className="flex flex-wrap gap-2">
-                                        {team.achievements.map((ach, idx) => (
-                                            <Badge key={idx} variant="warning" className="text-xs">
-                                                🏆 {ach}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="text-xs text-slate-500">
-                                        No tournament trophies claimed yet. Compete in upcoming campus scrims!
-                                    </p>
-                                )}
-                            </CardBody>
-                        </Card>
-                    </div>
-                </div>
+                {team.roster_history.length > 0 && (
+                    <section>
+                        <h2 className="text-base font-semibold text-white">Roster history</h2>
+                        <ul className="mt-3 space-y-2 text-sm text-slate-300">
+                            {team.roster_history.map((entry) => (
+                                <li key={entry.id}>{entry.user?.name} {entry.action} as {entry.role}</li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
             </div>
         </AppLayout>
     );

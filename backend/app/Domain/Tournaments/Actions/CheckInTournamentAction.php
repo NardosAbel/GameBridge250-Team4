@@ -28,6 +28,10 @@ class CheckInTournamentAction
             throw new AuthorizationException('You are not authorized to check in for this participant.');
         }
 
+        if ($registration->status !== 'approved') {
+            throw new InvalidArgumentException('Only an approved entrant can check in.');
+        }
+
         if (! $tournament->isCheckInOpen() && ! $isStaff) {
             throw new InvalidArgumentException('Tournament check-in is not currently open.');
         }

@@ -7,10 +7,12 @@ use App\Domain\Tournaments\Actions\CheckInTournamentAction;
 use App\Domain\Tournaments\Actions\CreateTournamentAction;
 use App\Domain\Tournaments\Actions\GenerateBracketAction;
 use App\Domain\Tournaments\Actions\RegisterTournamentAction;
+use App\Domain\Tournaments\Actions\ReviewTournamentRegistrationAction;
 use App\Domain\Tournaments\Actions\UpdateSeedingAction;
 use App\Domain\Tournaments\Actions\UpdateTournamentAction;
 use App\Domain\Tournaments\Actions\UpdateTournamentStatusAction;
 use App\Domain\Tournaments\Models\Tournament;
+use App\Domain\Tournaments\Models\TournamentRegistration;
 use App\Domain\Tournaments\Services\StandingsService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tournament\AssignStaffRequest;
@@ -21,14 +23,32 @@ use App\Http\Requests\Tournament\UpdateTournamentRequest;
 use App\Http\Resources\BracketResource;
 use App\Http\Resources\TournamentRegistrationResource;
 use App\Http\Resources\TournamentResource;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class TournamentController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Tournament::query()->with(['organizer', 'game']);
+        $query = Tournament::query()->with(['organizer', 'game', 'staff.user']);
+
+        $viewer = $this->viewer($request);
+        if (! $viewer?->hasRole('super_admin')) {
+            $query->where(function ($visibility) use ($viewer): void {
+                $visibility->where(function ($public): void {
+                    $public->where('visibility', 'public')
+                        ->whereNotIn('status', ['draft', 'archived']);
+                });
+
+                if ($viewer !== null) {
+                    $visibility->orWhere('organizer_id', $viewer->id)
+                        ->orWhereHas('staff', fn ($staff) => $staff->where('user_id', $viewer->id))
+                        ->orWhereHas('registrations', fn ($registrations) => $registrations->where('user_id', $viewer->id));
+                }
+            });
+        }
 
         if ($request->filled('game_id')) {
             $query->where('game_id', $request->query('game_id'));
@@ -78,8 +98,10 @@ class TournamentController extends Controller
         ], 201);
     }
 
-    public function show(Tournament $tournament, StandingsService $standingsService): JsonResponse
+    public function show(Request $request, Tournament $tournament, StandingsService $standingsService, RegisterTournamentAction $registrations): JsonResponse
     {
+        $this->authorizeTournamentView($request, $tournament);
+
         $tournament->load(['organizer', 'game', 'staff.user', 'brackets.nodes.match']);
 
         $standings = [];
@@ -88,10 +110,22 @@ class TournamentController extends Controller
             $standings = $standingsService->getBracketStandings($firstBracket);
         }
 
+        $payload = (new TournamentResource($tournament))->resolve($request);
+        $viewer = $this->viewer($request);
+        $registration = $viewer
+            ? $tournament->registrations()->where('user_id', $viewer->id)->first(['id', 'status'])
+            : null;
+        $payload['viewer_registration'] = $registration
+            ? ['status' => $registration->status]
+            : null;
+        $payload['viewer_eligibility'] = $viewer
+            ? $registrations->eligibilityIssue($viewer, $tournament)
+            : null;
+
         return response()->json([
             'success' => true,
             'data' => [
-                'tournament' => new TournamentResource($tournament),
+                'tournament' => $payload,
                 'brackets' => BracketResource::collection($tournament->brackets),
                 'standings' => $standings,
             ],
@@ -111,7 +145,7 @@ class TournamentController extends Controller
 
     public function destroy(Request $request, Tournament $tournament): JsonResponse
     {
-        $this->authorize('delete', $tournament);
+        Gate::authorize('delete', $tournament);
         $tournament->delete();
 
         return response()->json([
@@ -122,7 +156,7 @@ class TournamentController extends Controller
 
     public function updateStatus(Request $request, Tournament $tournament, UpdateTournamentStatusAction $action): JsonResponse
     {
-        $this->authorize('update', $tournament);
+        Gate::authorize('update', $tournament);
         $request->validate(['status' => 'required|string']);
 
         $updated = $action->execute($request->user(), $tournament, $request->input('status'));
@@ -140,21 +174,51 @@ class TournamentController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Registration successful.',
+            'message' => $registration->status === 'approved'
+                ? 'Registration approved.'
+                : 'Application submitted. An organizer still has to approve it.',
             'data' => new TournamentRegistrationResource($registration),
         ], 201);
     }
 
-    public function participants(Tournament $tournament): JsonResponse
+    public function participants(Request $request, Tournament $tournament): JsonResponse
     {
+        $this->authorizeTournamentView($request, $tournament);
+
         $registrations = $tournament->registrations()
             ->with(['user.profile', 'team'])
+            ->when(Gate::forUser($request->user())->denies('update', $tournament), function ($query) {
+                $query->where('status', 'approved');
+            })
             ->orderByRaw('CASE WHEN seed IS NULL THEN 1 ELSE 0 END, seed ASC')
             ->get();
 
         return response()->json([
             'success' => true,
             'data' => TournamentRegistrationResource::collection($registrations),
+        ]);
+    }
+
+    public function reviewRegistration(
+        Request $request,
+        Tournament $tournament,
+        TournamentRegistration $registration,
+        ReviewTournamentRegistrationAction $action
+    ): JsonResponse {
+        if ($registration->tournament_id !== $tournament->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'decision' => ['required', 'in:approved,rejected'],
+        ]);
+
+        $updated = $action->execute($request->user(), $registration, $validated['decision']);
+
+        return response()->json([
+            'success' => true,
+            'message' => $updated->status === 'approved' ? 'Application approved.' : 'Application rejected.',
+            'data' => new TournamentRegistrationResource($updated),
         ]);
     }
 
@@ -214,5 +278,25 @@ class TournamentController extends Controller
             'message' => 'Tournament staff assigned successfully.',
             'data' => $staff,
         ]);
+    }
+
+    private function viewer(Request $request): ?User
+    {
+        $user = $request->user() ?? $request->user('sanctum');
+
+        return $user instanceof User ? $user : null;
+    }
+
+    private function authorizeTournamentView(Request $request, Tournament $tournament): void
+    {
+        $viewer = $this->viewer($request);
+
+        if ($viewer instanceof User) {
+            Gate::forUser($viewer)->authorize('view', $tournament);
+
+            return;
+        }
+
+        Gate::authorize('view', $tournament);
     }
 }

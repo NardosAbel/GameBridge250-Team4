@@ -1,7 +1,13 @@
 <?php
 
+use App\Domain\Social\Models\Post;
+use App\Domain\Tournaments\Models\Tournament;
 use App\Http\Controllers\Web\AuthController;
+use App\Http\Controllers\Web\DashboardController;
+use App\Http\Controllers\Web\HomeController;
+use App\Http\Controllers\Web\PlayerPassportController;
 use App\Http\Controllers\Web\ProfileController;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -12,9 +18,15 @@ use Inertia\Inertia;
 */
 
 // Public Landing Page
-Route::get('/', function () {
-    return Inertia::render('Landing');
-})->name('home');
+Route::get('/', HomeController::class)->name('home');
+
+Route::get('/players/{handle}', [PlayerPassportController::class, 'show'])->name('players.passport');
+
+Route::get('/posts/{post}', function (Post $post) {
+    Gate::authorize('view', $post);
+
+    return Inertia::render('Social/PostShow', ['postId' => $post->id]);
+})->name('posts.show');
 
 // Guest Authentication Routes
 Route::middleware(['guest', 'throttle:10,1'])->group(function () {
@@ -40,9 +52,7 @@ Route::middleware('throttle:10,1')->group(function () {
 
 // Authenticated Routes
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -94,6 +104,9 @@ Route::middleware('auth')->group(function () {
     })->name('tournaments.show');
 
     Route::get('/tournaments/{id}/manage', function ($id) {
+        $tournament = Tournament::query()->findOrFail($id);
+        Gate::authorize('update', $tournament);
+
         return Inertia::render('Tournaments/Manage', ['tournamentId' => (int) $id]);
     })->name('tournaments.manage');
 
@@ -173,6 +186,9 @@ Route::middleware('auth')->group(function () {
     })->name('admin.dashboard');
 
     Route::get('/tournaments/{id}/prize-pool', function ($id) {
+        $tournament = Tournament::query()->findOrFail($id);
+        Gate::authorize('update', $tournament);
+
         return Inertia::render('Tournaments/PrizePool', ['tournamentId' => (int) $id]);
     })->name('tournaments.prize-pool');
 

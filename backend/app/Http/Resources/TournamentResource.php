@@ -53,6 +53,7 @@ class TournamentResource extends JsonResource
                 'icon_url' => $this->game->icon_url,
             ] : null,
             'participants_count' => $this->approvedRegistrations()->count(),
+            'reserved_count' => $this->registrations()->whereIn('status', ['pending', 'approved'])->count(),
             'staff' => $this->staff->map(fn ($s) => [
                 'id' => $s->id,
                 'user_id' => $s->user_id,

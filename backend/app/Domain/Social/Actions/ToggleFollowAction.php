@@ -47,7 +47,9 @@ class ToggleFollowAction
                     title: 'New Follower',
                     message: "{$follower->name} started following you.",
                     type: 'social',
-                    actionUrl: "/gamer/{$follower->profile?->handle}"
+                    actionUrl: $follower->profile?->gamer_tag
+                        ? '/players/'.$follower->profile->gamer_tag
+                        : '/feed'
                 ),
                 eventType: 'follows'
             );

@@ -5,6 +5,7 @@ use App\Domain\Identity\Models\AuditLog;
 use App\Domain\Identity\Models\Otp;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
+use Illuminate\Support\Facades\Mail;
 
 beforeEach(function () {
     $this->seed(RoleSeeder::class);
@@ -87,4 +88,58 @@ test('registration rejects duplicate email or gamer tag', function () {
             'message' => 'Validation failed.',
         ])
         ->assertJsonValidationErrors(['email']);
+});
+
+test('web registration creates one user and signs them in', function () {
+    $response = $this->post('/register', [
+        'name' => 'Hanna Bekele',
+        'email' => 'hanna.bekele.bridge@example.com',
+        'phone' => '+251911223344',
+        'password' => 'Passw0rd123!',
+        'password_confirmation' => 'Passw0rd123!',
+        'gamer_tag' => 'HannaBridge',
+        'university' => 'Addis Ababa University',
+    ]);
+
+    $response->assertRedirect(route('verification.notice', [
+        'recipient' => 'hanna.bekele.bridge@example.com',
+        'type' => 'email_verification',
+    ]));
+
+    expect(User::where('email', 'hanna.bekele.bridge@example.com')->count())->toBe(1);
+    $this->assertAuthenticated();
+});
+
+test('web registration keeps the account when verification email fails', function () {
+    Mail::shouldReceive('raw')
+        ->once()
+        ->andThrow(new RuntimeException('smtp unavailable'));
+
+    $response = $this->post('/register', [
+        'name' => 'Sara Mekonnen',
+        'email' => 'sara.mekonnen@example.com',
+        'password' => 'Passw0rd123!',
+        'password_confirmation' => 'Passw0rd123!',
+        'gamer_tag' => 'SaraBridge',
+    ]);
+
+    $response->assertRedirect();
+    expect(User::where('email', 'sara.mekonnen@example.com')->count())->toBe(1);
+    expect(Otp::where('recipient', 'sara.mekonnen@example.com')->count())->toBe(1);
+    $this->assertAuthenticated();
+});
+
+test('web registration shows validation errors and does not create a user', function () {
+    $response = $this->from('/register')->post('/register', [
+        'name' => 'Bad Form',
+        'email' => 'not-an-email',
+        'password' => 'short',
+        'password_confirmation' => 'short',
+        'gamer_tag' => 'x',
+    ]);
+
+    $response->assertRedirect('/register');
+    $response->assertSessionHasErrors(['email', 'password', 'gamer_tag']);
+    expect(User::where('name', 'Bad Form')->exists())->toBeFalse();
+    $this->assertGuest();
 });

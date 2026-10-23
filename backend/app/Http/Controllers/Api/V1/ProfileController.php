@@ -10,6 +10,7 @@ use App\Http\Resources\ProfileResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 
 class ProfileController extends ApiController
 {
@@ -42,6 +43,29 @@ class ProfileController extends ApiController
         $profile = $this->updateProfileAction->execute($request->user(), $request->validated());
 
         return $this->successResponse(new ProfileResource($profile), 'Profile updated successfully.');
+    }
+
+    public function updateAvatar(Request $request): JsonResponse
+    {
+        $request->validate([
+            'avatar' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+        ]);
+
+        $user = $request->user();
+        $profile = $user->profile()->firstOrCreate(
+            ['user_id' => $user->id],
+            [
+                'gamer_tag' => 'Gamer_'.substr($user->uuid, 0, 6),
+                'is_public' => true,
+            ]
+        );
+
+        $path = $request->file('avatar')->store('avatars/'.$user->id, 'public');
+        $profile->update([
+            'avatar_url' => Storage::disk('public')->url($path),
+        ]);
+
+        return $this->successResponse(new ProfileResource($profile->fresh()), 'Profile picture updated.');
     }
 
     /**

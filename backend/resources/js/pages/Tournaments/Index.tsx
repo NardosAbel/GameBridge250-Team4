@@ -1,30 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { AppLayout } from '../../layouts/AppLayout';
-import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import {
-    Trophy,
     Search,
     Plus,
-    Calendar,
-    Users,
-    Gamepad2,
-    Shield,
-    Sparkles,
-    CheckCircle2,
     AlertCircle,
-    SlidersHorizontal,
-    Tv
 } from 'lucide-react';
 
 interface Game {
     id: number;
     name: string;
     slug: string;
+    banner_url?: string | null;
+    icon_url?: string | null;
 }
 
 interface Tournament {
@@ -45,6 +36,7 @@ interface Tournament {
     status: string;
     participants_count: number;
     starts_at: string;
+    registration_end_at?: string | null;
     game: Game;
     banner_url?: string;
     organizer: {
@@ -76,7 +68,7 @@ export default function TournamentIndex() {
         event_type: 'online',
         entry_type: 'free',
         entry_fee: '0',
-        prize_pool: '5000',
+        prize_pool: '0',
         capacity: '16',
         rules: '1. Standard competitive rules apply.\n2. Respect all participants.\n3. Matches must be started within 15 minutes of scheduled time.',
         starts_at: new Date(Date.now() + 86400000 * 3).toISOString().slice(0, 16),
@@ -98,7 +90,8 @@ export default function TournamentIndex() {
             const res = await fetch(`/api/v1/tournaments?${params.toString()}`);
             const data = await res.json();
             if (data.success) {
-                setTournaments(data.data);
+                const payload = data.data;
+                setTournaments(Array.isArray(payload) ? payload : (payload?.data ?? []));
             }
         } catch (e) {
             console.error('Failed to load tournaments', e);
@@ -164,16 +157,6 @@ export default function TournamentIndex() {
         }
     };
 
-    const getStatusVariant = (status: string): "neutral" | "success" | "warning" | "danger" | "info" => {
-        switch (status) {
-            case 'live': return 'danger';
-            case 'registration_open': return 'success';
-            case 'check_in': return 'warning';
-            case 'completed': return 'neutral';
-            default: return 'info';
-        }
-    };
-
     const formatLabel = (format: string) => {
         switch (format) {
             case 'single_elimination': return 'Single Elimination';
@@ -185,47 +168,44 @@ export default function TournamentIndex() {
         }
     };
 
+    const when = (iso?: string | null) => {
+        if (!iso) return '';
+        const date = new Date(iso);
+        if (Number.isNaN(date.getTime())) return '';
+        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    };
+
     return (
         <AppLayout>
             <Head title="Tournaments — Campus Esports Ethiopia" />
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
                 {/* Hero Header */}
-                <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-emerald-950 via-slate-900 to-indigo-950 border border-emerald-500/20 p-8 sm:p-12 shadow-2xl">
-                    <div className="relative z-10 max-w-2xl space-y-4">
-                        <Badge variant="success" className="px-3 py-1 text-xs uppercase tracking-wider font-semibold">
-                            Esports Tournaments
-                        </Badge>
-                        <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-                            Collegiate & Varsity Championship
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-slate-800 pb-6">
+                    <div className="max-w-2xl">
+                        <h1 className="font-display text-4xl text-white sm:text-5xl">
+                            Competitions
                         </h1>
-                        <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
-                            Compete in verified Ethiopian inter-campus tournaments across PUBG Mobile, Valorant, and FC 25. Win cash prize pools and season points.
+                        <p className="mt-2 text-sm sm:text-base text-slate-300 leading-relaxed">
+                            Published events with an open registration window. Drafts stay with the organizer until they are published.
                         </p>
-                        <div className="pt-2 flex flex-wrap gap-3">
-                            {isOrganizer && (
-                                <Button
-                                    variant="primary"
-                                    onClick={() => setShowCreateModal(true)}
-                                    className="flex items-center gap-2"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    Host Tournament
-                                </Button>
-                            )}
-                            <Link href="/rankings">
-                                <Button variant="outline" className="flex items-center gap-2">
-                                    <Trophy className="w-4 h-4 text-amber-400" />
-                                    View Leaderboards
-                                </Button>
-                            </Link>
-                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                        {isOrganizer && (
+                            <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+                                <Plus className="w-4 h-4" />
+                                Host a tournament
+                            </Button>
+                        )}
+                        <Link href="/rankings">
+                            <Button variant="outline">Rankings</Button>
+                        </Link>
                     </div>
                 </div>
 
                 {/* Filters & Search */}
-                <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 sm:p-6 backdrop-blur-md space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                         {/* Search Input */}
                         <div className="relative">
                             <Search className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
@@ -234,7 +214,7 @@ export default function TournamentIndex() {
                                 placeholder="Search tournaments..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500"
+                                className="min-h-11 w-full border border-slate-700 bg-transparent pl-9 pr-3 text-sm text-white focus:border-lime-300 focus:outline-none"
                             />
                         </div>
 
@@ -242,7 +222,7 @@ export default function TournamentIndex() {
                         <select
                             value={selectedGame}
                             onChange={(e) => setSelectedGame(e.target.value)}
-                            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-300 text-sm focus:outline-none focus:border-emerald-500"
+                            className="min-h-11 border border-slate-700 bg-transparent px-3 text-sm text-slate-200 focus:border-lime-300 focus:outline-none"
                         >
                             <option value="">All Games</option>
                             {games.map(g => (
@@ -254,7 +234,7 @@ export default function TournamentIndex() {
                         <select
                             value={selectedFormat}
                             onChange={(e) => setSelectedFormat(e.target.value)}
-                            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-300 text-sm focus:outline-none focus:border-emerald-500"
+                            className="min-h-11 border border-slate-700 bg-transparent px-3 text-sm text-slate-200 focus:border-lime-300 focus:outline-none"
                         >
                             <option value="">All Formats</option>
                             <option value="single_elimination">Single Elimination</option>
@@ -268,7 +248,7 @@ export default function TournamentIndex() {
                         <select
                             value={selectedStatus}
                             onChange={(e) => setSelectedStatus(e.target.value)}
-                            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-300 text-sm focus:outline-none focus:border-emerald-500"
+                            className="min-h-11 border border-slate-700 bg-transparent px-3 text-sm text-slate-200 focus:border-lime-300 focus:outline-none"
                         >
                             <option value="">All Statuses</option>
                             <option value="registration_open">Registration Open</option>
@@ -281,94 +261,67 @@ export default function TournamentIndex() {
 
                 {/* Tournament Grid */}
                 {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[1, 2, 3, 4, 5, 6].map(i => (
-                            <div key={i} className="h-72 bg-slate-900/40 rounded-2xl animate-pulse border border-slate-800" />
+                    <ul className="divide-y divide-slate-800 border-y border-slate-800" aria-hidden="true">
+                        {[1, 2, 3].map((i) => (
+                            <li key={i} className="h-24 animate-pulse bg-slate-900/40" />
                         ))}
-                    </div>
+                    </ul>
                 ) : tournaments.length === 0 ? (
-                    <div className="text-center py-16 bg-slate-900/30 rounded-3xl border border-dashed border-slate-800 space-y-4">
-                        <Trophy className="w-12 h-12 text-slate-600 mx-auto" />
-                        <h3 className="text-lg font-bold text-white">No tournaments found</h3>
-                        <p className="text-sm text-slate-400 max-w-sm mx-auto">
-                            No tournaments match your current filters. Check back soon or host your own tournament.
+                    <div className="py-12 border border-slate-800 px-6">
+                        <h2 className="text-lg font-semibold text-white">No competitions match this view</h2>
+                        <p className="mt-2 text-sm text-slate-400 max-w-lg">
+                            {isOrganizer
+                                ? 'Nothing is published for these filters. Host a tournament to create the first one. It stays a draft until you publish it.'
+                                : 'Organizers have not published a competition that matches these filters.'}
                         </p>
+                        {isOrganizer && (
+                            <Button className="mt-5" onClick={() => setShowCreateModal(true)}>
+                                Host a tournament
+                            </Button>
+                        )}
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {tournaments.map((t) => (
-                            <Link key={t.id} href={`/tournaments/${t.id}`} className="group block">
-                                <Card className="h-full bg-slate-900/50 hover:bg-slate-900 border-slate-800 hover:border-emerald-500/50 transition-all duration-300 flex flex-col justify-between overflow-hidden">
-                                    <div className="space-y-4">
-                                        {/* Header / Game Banner */}
-                                        <div className="h-32 bg-gradient-to-tr from-slate-950 to-slate-800 relative p-4 flex flex-col justify-between">
-                                            <div className="flex items-center justify-between">
-                                                <Badge variant="outline" className="bg-slate-950/80 text-xs font-semibold backdrop-blur-sm">
-                                                    {t.game?.name || 'General Esports'}
-                                                </Badge>
-                                                <Badge variant={getStatusVariant(t.status)} className="capitalize">
-                                                    {t.status.replace('_', ' ')}
-                                                </Badge>
+                    <ul className="divide-y divide-slate-800 border-y border-slate-800">
+                        {tournaments.map((t, index) => {
+                            const art = t.banner_url || t.game?.banner_url || t.game?.icon_url;
+                            const start = when(t.starts_at);
+                            const deadline = when(t.registration_end_at);
+                            return (
+                                <li key={t.id}>
+                                    <Link
+                                        href={`/tournaments/${t.id}`}
+                                        className={`grid gap-4 py-5 sm:items-center ${index === 0 ? 'sm:grid-cols-[minmax(0,14rem)_1fr]' : 'sm:grid-cols-[8.5rem_1fr]'}`}
+                                    >
+                                        {art ? (
+                                            <img src={art} alt="" className={`w-full object-cover ${index === 0 ? 'h-40' : 'h-20'}`} />
+                                        ) : (
+                                            <p className={`font-display text-lime-300 ${index === 0 ? 'text-lg' : 'text-sm'}`}>
+                                                {t.game?.name || 'Game not set'}
+                                            </p>
+                                        )}
+                                        <div className="flex min-w-0 items-end justify-between gap-4">
+                                            <div>
+                                                {art && <p className="text-sm text-lime-300">{t.game?.name || 'Game not set'}</p>}
+                                                <h2 className={`font-display text-white ${index === 0 ? 'text-2xl sm:text-3xl' : 'text-xl'}`}>{t.title}</h2>
+                                                <p className="mt-1 text-sm text-slate-300">
+                                                    {t.status.replace(/_/g, ' ')}
+                                                    {start ? ` · Starts ${start}` : ''}
+                                                    {deadline ? ` · Register by ${deadline}` : ''}
+                                                </p>
+                                                <p className="mt-1 text-sm text-slate-400">
+                                                    {formatLabel(t.format)}
+                                                    {t.match_format ? ` · ${t.match_format.toUpperCase()}` : ''}
+                                                    {t.region ? ` · ${t.region}` : ''}
+                                                    {` · ${t.participants_count} of ${t.capacity} entered`}
+                                                </p>
                                             </div>
-                                            <div className="flex items-center gap-2 text-xs text-slate-300 font-medium">
-                                                <span className="bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-md">
-                                                    {t.match_format.toUpperCase()}
-                                                </span>
-                                                <span>•</span>
-                                                <span>{formatLabel(t.format)}</span>
-                                            </div>
+                                            <span className="shrink-0 text-sm text-lime-300">View</span>
                                         </div>
-
-                                        {/* Body */}
-                                        <div className="p-5 space-y-3">
-                                            <h3 className="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors line-clamp-1">
-                                                {t.title}
-                                            </h3>
-
-                                            <div className="grid grid-cols-2 gap-2 text-xs text-slate-400 pt-1">
-                                                <div className="flex items-center gap-1.5">
-                                                    <Trophy className="w-4 h-4 text-amber-400" />
-                                                    <span className="font-semibold text-slate-200">
-                                                        {t.prize_pool > 0 ? `${t.prize_pool.toLocaleString()} ${t.currency}` : 'Bragging Rights'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <Users className="w-4 h-4 text-cyan-400" />
-                                                    <span>{t.participants_count} / {t.capacity} Teams</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <Calendar className="w-4 h-4 text-indigo-400" />
-                                                    <span>{new Date(t.starts_at).toLocaleDateString()}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <Gamepad2 className="w-4 h-4 text-pink-400" />
-                                                    <span>{t.platform}</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Capacity Progress Bar */}
-                                            <div className="pt-2">
-                                                <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
-                                                    <div
-                                                        className="bg-emerald-500 h-full rounded-full transition-all duration-500"
-                                                        style={{ width: `${Math.min(100, (t.participants_count / t.capacity) * 100)}%` }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Footer */}
-                                    <div className="p-4 bg-slate-950/40 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-                                        <span>Hosted by <strong className="text-slate-300">{t.organizer?.name}</strong></span>
-                                        <span className="text-emerald-400 font-semibold group-hover:translate-x-1 transition-transform">
-                                            View Tournament &rarr;
-                                        </span>
-                                    </div>
-                                </Card>
-                            </Link>
-                        ))}
-                    </div>
+                                    </Link>
+                                </li>
+                            );
+                        })}
+                    </ul>
                 )}
             </div>
 

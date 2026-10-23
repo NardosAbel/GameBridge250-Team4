@@ -92,7 +92,7 @@ interface Props {
 export default function CourseShow({ courseId }: Props) {
     const [course, setCourse] = useState<CourseDetails | null>(null);
     const [loading, setLoading] = useState(true);
-    const [locale, setLocale] = useState<'en' | 'am'>('en');
+    const [locale] = useState<'en' | 'am'>('en');
     const [enrolling, setEnrolling] = useState(false);
 
     useEffect(() => {
@@ -184,20 +184,6 @@ export default function CourseShow({ courseId }: Props) {
                         {locale === 'am' ? 'ወደ ትምህርት ማዕከል ተመለስ' : 'Back to Learning Hub'}
                     </Link>
 
-                    <div className="flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700">
-                        <button
-                            onClick={() => setLocale('en')}
-                            className={`px-3 py-1 rounded text-xs font-semibold ${locale === 'en' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}
-                        >
-                            EN
-                        </button>
-                        <button
-                            onClick={() => setLocale('am')}
-                            className={`px-3 py-1 rounded text-xs font-semibold ${locale === 'am' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}
-                        >
-                            አማርኛ
-                        </button>
-                    </div>
                 </div>
 
                 {/* Hero Header Card */}

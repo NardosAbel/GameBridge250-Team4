@@ -138,11 +138,12 @@ class RefundService
 
             // 1. Process via Payment Gateway if payment exists
             $payment = $refund->payment;
-            $providerSettled = false;
             if ($payment && $payment->provider) {
                 $gateway = $this->gatewayManager->driver($payment->provider);
                 $providerResult = $gateway->refund($payment, (float) $refund->amount, $refund->reason);
-                $providerSettled = (bool) ($providerResult['success'] ?? false);
+                if (! (bool) ($providerResult['success'] ?? false)) {
+                    throw new InvalidArgumentException('The payment provider did not confirm this refund. Tickets were not changed.');
+                }
             }
 
             if ($order) {
@@ -178,7 +179,7 @@ class RefundService
                 metadata: [
                     'amount' => $refund->amount,
                     'order_id' => $order?->id,
-                    'provider_settled' => $providerSettled,
+                    'provider_settled' => true,
                 ]
             );
 

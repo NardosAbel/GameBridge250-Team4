@@ -3,6 +3,7 @@
 namespace App\Domain\Social\Services;
 
 use App\Domain\Communities\Models\CommunityMember;
+use App\Domain\Profiles\Models\Game;
 use App\Domain\Social\Models\Follow;
 use App\Domain\Social\Models\Post;
 use App\Domain\Social\Models\UserBlock;
@@ -20,7 +21,28 @@ class FeedService
     public function getFeed(?User $user = null, string $type = 'personalized', array $filters = []): LengthAwarePaginator
     {
         $query = Post::query()
-            ->with(['user.profile', 'media', 'game', 'community', 'team'])
+            ->with([
+                'user.profile',
+                'media',
+                'game',
+                'community',
+                'team',
+                'tournament',
+                'reactions' => function ($reactionQuery) use ($user) {
+                    if ($user) {
+                        $reactionQuery->where('user_id', $user->id);
+                    } else {
+                        $reactionQuery->whereRaw('1 = 0');
+                    }
+                },
+                'bookmarks' => function ($bookmarkQuery) use ($user) {
+                    if ($user) {
+                        $bookmarkQuery->where('user_id', $user->id);
+                    } else {
+                        $bookmarkQuery->whereRaw('1 = 0');
+                    }
+                },
+            ])
             ->withCount(['comments', 'reactions', 'shares']);
 
         // Exclude blocked and muted users if user is authenticated
@@ -53,6 +75,14 @@ class FeedService
             $query->where('team_id', $filters['team_id']);
         }
 
+        if (! empty($filters['user_id'])) {
+            $query->where('user_id', $filters['user_id']);
+        }
+
+        if (! empty($filters['tournament_id'])) {
+            $query->where('tournament_id', $filters['tournament_id']);
+        }
+
         // Apply hashtag filter if requested
         if (! empty($filters['hashtag'])) {
             $tag = ltrim($filters['hashtag'], '#');
@@ -75,7 +105,7 @@ class FeedService
                 ->pluck('team_id')
                 ->all();
 
-            $preferredGameIds = $user->profile?->preferred_games ?? [];
+            $preferredGameIds = $this->preferredGameIds($user->profile?->preferred_games ?? []);
             $userLocation = $user->profile?->location;
 
             // Personalized algorithm: followed users, joined communities/teams, preferred games, location, or user's own posts
@@ -107,5 +137,31 @@ class FeedService
             ->orderByDesc('pinned')
             ->orderByDesc('created_at')
             ->paginate($perPage);
+    }
+
+    /**
+     * Profiles store preferred games as names or ids. Only numeric ids can be compared to posts.game_id.
+     *
+     * @param  array<int, mixed>  $preferred
+     * @return array<int, int>
+     */
+    private function preferredGameIds(array $preferred): array
+    {
+        $ids = [];
+        $names = [];
+
+        foreach ($preferred as $value) {
+            if (is_int($value) || (is_string($value) && ctype_digit($value))) {
+                $ids[] = (int) $value;
+            } elseif (is_string($value) && $value !== '') {
+                $names[] = $value;
+            }
+        }
+
+        if ($names !== []) {
+            $ids = array_merge($ids, Game::query()->whereIn('name', $names)->pluck('id')->all());
+        }
+
+        return array_values(array_unique($ids));
     }
 }

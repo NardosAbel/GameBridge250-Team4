@@ -42,8 +42,10 @@ class RegisterTournamentAction
                 $team = Team::findOrFail($data['team_id']);
 
                 // Verify user is team captain or owner
-                $member = $team->members()->where('user_id', $user->id)->first();
-                if (! $member || ! in_array($member->role, ['owner', 'captain', 'manager'], true)) {
+                $member = $team->members()->where('user_id', $user->id)->where('status', 'active')->first();
+                $isLeader = (int) $team->leader_id === (int) $user->id;
+                $canRepresent = $isLeader || ($member && in_array($member->role, ['owner', 'captain', 'manager'], true));
+                if (! $canRepresent) {
                     throw new AuthorizationException('Only team captains, managers, or owners can register the team.');
                 }
 
@@ -93,8 +95,8 @@ class RegisterTournamentAction
                 ])->all();
             }
 
-            // Initial status: Free tournaments auto-approved or pending organizer approval
-            $status = ($tournament->entry_type === 'free' && ($tournament->settings['auto_approve'] ?? true))
+            // Manual review is the default. Auto-approval only happens when the organizer set it explicitly.
+            $status = ($tournament->settings['auto_approve'] ?? false) === true
                 ? 'approved'
                 : 'pending';
 
@@ -125,6 +127,21 @@ class RegisterTournamentAction
 
             return $registration;
         });
+    }
+
+    /**
+     * Reason this player cannot enter, or null when the published rules allow them.
+     * Team-only rules are checked again when a team is submitted.
+     */
+    public function eligibilityIssue(User $user, Tournament $tournament, ?Team $team = null): ?string
+    {
+        try {
+            $this->validateEligibility($user, $tournament, $team);
+
+            return null;
+        } catch (InvalidArgumentException $exception) {
+            return $exception->getMessage();
+        }
     }
 
     /**

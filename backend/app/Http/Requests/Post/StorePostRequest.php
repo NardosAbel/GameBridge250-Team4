@@ -16,19 +16,20 @@ class StorePostRequest extends FormRequest
         return [
             'content' => ['required', 'string', 'max:5000'],
             'title' => ['nullable', 'string', 'max:255'],
-            'type' => ['nullable', 'string', 'in:text,clip,livestream,announcement,poll'],
+            'type' => ['nullable', 'string', 'in:text,announcement,poll'],
             'visibility' => ['nullable', 'string', 'in:public,community,team'],
             'game_id' => ['nullable', 'exists:games,id'],
+            'tournament_id' => ['nullable', 'exists:tournaments,id'],
             'community_id' => ['nullable', 'exists:communities,id'],
             'team_id' => ['nullable', 'exists:teams,id'],
+            'sponsored' => ['nullable', 'boolean'],
             'location_tag' => ['nullable', 'string', 'max:100'],
             'hashtags' => ['nullable', 'array'],
             'hashtags.*' => ['string', 'max:50'],
             'poll_options' => ['nullable', 'array', 'min:2', 'max:10'],
             'poll_options.*' => ['string', 'max:100'],
-            'media' => ['nullable', 'array', 'max:5'],
-            'media.*' => ['file', 'mimes:jpg,jpeg,png,webp,mp4,webm,mov', 'max:51200'], // 50MB max
-            'pinned' => ['nullable', 'boolean'],
+            'media' => ['nullable', 'array', 'max:4'],
+            'media.*' => ['file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ];
     }
 }

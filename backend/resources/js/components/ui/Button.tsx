@@ -22,20 +22,20 @@ export const Button: React.FC<ButtonProps> = ({
     disabled,
     ...props
 }) => {
-    const baseStyles = 'inline-flex items-center justify-center font-medium transition-colors duration-150 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none cursor-pointer';
+    const baseStyles = 'inline-flex min-h-11 items-center justify-center font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime-300 disabled:opacity-50 disabled:cursor-not-allowed select-none cursor-pointer';
 
     const variants = {
-        primary: 'bg-emerald-600 hover:bg-emerald-500 text-white focus:ring-emerald-500 focus:ring-offset-slate-900 shadow-sm shadow-emerald-950/50',
-        secondary: 'bg-indigo-600 hover:bg-indigo-500 text-white focus:ring-indigo-500 focus:ring-offset-slate-900 shadow-sm',
-        outline: 'border border-slate-700 hover:border-slate-500 text-slate-200 hover:bg-slate-800 focus:ring-slate-400 focus:ring-offset-slate-900',
-        ghost: 'text-slate-300 hover:bg-slate-800/60 hover:text-white focus:ring-slate-400 focus:ring-offset-slate-900',
-        danger: 'bg-rose-600 hover:bg-rose-500 text-white focus:ring-rose-500 focus:ring-offset-slate-900 shadow-sm',
+        primary: 'bg-lime-300 text-slate-950 hover:bg-lime-200',
+        secondary: 'bg-slate-800 text-slate-100 hover:bg-slate-700',
+        outline: 'border border-slate-600 text-slate-100 hover:border-lime-300 hover:text-lime-300',
+        ghost: 'text-slate-300 hover:text-white',
+        danger: 'bg-rose-700 text-white hover:bg-rose-600',
     };
 
     const sizes = {
-        sm: 'text-xs px-3 py-1.5 gap-1.5',
-        md: 'text-sm px-4 py-2 gap-2',
-        lg: 'text-base px-6 py-3 gap-2.5',
+        sm: 'text-sm px-3 gap-1.5',
+        md: 'text-sm px-4 gap-2',
+        lg: 'text-base px-5 gap-2',
     };
 
     return (

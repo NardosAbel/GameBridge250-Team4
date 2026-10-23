@@ -34,6 +34,7 @@ class RankingResource extends JsonResource
                 'type' => 'user',
                 'id' => $this->user->id,
                 'name' => $this->user->name,
+                'gamer_tag' => $this->user->profile?->gamer_tag,
                 'handle' => $this->user->profile?->handle,
                 'avatar_url' => $this->user->profile?->avatar_url,
                 'university' => $this->user->profile?->university,

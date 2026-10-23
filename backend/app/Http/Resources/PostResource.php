@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -30,6 +31,7 @@ class PostResource extends JsonResource
             'poll_data' => $this->poll_data,
             'user_voted_option' => ($user && ! empty($this->poll_data['voters'][$user->id])) ? $this->poll_data['voters'][$user->id] : null,
             'pinned' => (bool) $this->pinned,
+            'sponsored' => (bool) $this->sponsored,
             'media' => $this->media->map(fn ($m) => [
                 'id' => $m->id,
                 'media_url' => $m->media_url,
@@ -52,14 +54,44 @@ class PostResource extends JsonResource
                 'tag' => $this->team->tag,
                 'slug' => $this->team->slug,
             ] : null,
+            'tournament' => $this->tournament ? [
+                'id' => $this->tournament->id,
+                'title' => $this->tournament->title,
+            ] : null,
             'stats' => [
                 'reactions_count' => $this->reactions_count ?? $this->reactions()->count(),
                 'comments_count' => $this->comments_count ?? $this->comments()->count(),
                 'shares_count' => $this->shares_count ?? 0,
             ],
-            'user_reaction' => $user ? $this->reactions()->where('user_id', $user->id)->value('type') : null,
-            'is_bookmarked' => $user ? $this->bookmarks()->where('user_id', $user->id)->exists() : false,
+            'user_reaction' => $this->viewerReaction($user),
+            'is_bookmarked' => $this->viewerBookmarked($user),
             'created_at' => $this->created_at?->toISOString(),
         ];
+    }
+
+    private function viewerReaction(?User $user): ?string
+    {
+        if ($user === null) {
+            return null;
+        }
+
+        if ($this->relationLoaded('reactions')) {
+            return $this->reactions->first()?->type;
+        }
+
+        return $this->reactions()->where('user_id', $user->id)->value('type');
+    }
+
+    private function viewerBookmarked(?User $user): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        if ($this->relationLoaded('bookmarks')) {
+            return $this->bookmarks->isNotEmpty();
+        }
+
+        return $this->bookmarks()->where('user_id', $user->id)->exists();
     }
 }

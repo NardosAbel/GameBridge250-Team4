@@ -29,7 +29,7 @@ export const Input: React.FC<InputProps> = ({
     return (
         <div className="w-full space-y-1.5 text-left">
             {label && (
-                <label htmlFor={id} className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                <label htmlFor={id} className="block text-sm text-slate-300">
                     {label}
                 </label>
             )}
@@ -46,8 +46,8 @@ export const Input: React.FC<InputProps> = ({
                     aria-describedby={error ? errorId : helperText ? helperId : undefined}
                     className={twMerge(
                         clsx(
-                            'w-full rounded-lg bg-slate-900 border text-slate-100 placeholder-slate-500 text-sm py-2.5 px-3.5 transition-colors',
-                            'focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500',
+                            'min-h-11 w-full border bg-transparent text-slate-100 placeholder-slate-500 text-sm px-3 transition-colors',
+                            'focus:outline-none focus:border-lime-300',
                             leftIcon ? 'pl-10' : '',
                             rightIcon ? 'pr-10' : '',
                             error ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/40' : 'border-slate-800 hover:border-slate-700',

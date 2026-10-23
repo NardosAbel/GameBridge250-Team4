@@ -3,8 +3,6 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import { AppLayout } from '../../layouts/AppLayout';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Card } from '../../components/ui/Card';
-import { LogIn, User, Lock } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
 
 export default function Login({ status }: { status?: string }) {
@@ -27,22 +25,19 @@ export default function Login({ status }: { status?: string }) {
         <AppLayout>
             <Head title="Log In - Campus Esports Ethiopia" />
 
-            <div className="py-16 px-4 sm:px-6 lg:px-8 max-w-md mx-auto">
-                <Card className="border-slate-800 bg-slate-900/90 shadow-2xl">
-                    <div className="text-center mb-6">
-                        <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto mb-3">
-                            <LogIn className="w-6 h-6" />
-                        </div>
-                        <h1 className="text-2xl font-extrabold text-white">
-                            {t('auth.welcome_back')}
-                        </h1>
-                        <p className="text-xs text-slate-400 mt-1">
-                            {t('auth.login_sub')}
-                        </p>
-                    </div>
+            <div className="mx-auto max-w-md px-4 py-16">
+                <div>
+                    <p className="font-display text-sm text-lime-300">GameBridge</p>
+                    <h1 className="mt-2 font-display text-4xl text-white">
+                        {t('auth.welcome_back')}
+                    </h1>
+                    <p className="mt-2 text-sm text-slate-400">
+                        {t('auth.login_sub')}
+                    </p>
+                </div>
 
                     {status && (
-                        <div className="mb-4 text-xs font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-lg text-center">
+                        <div className="mb-4 text-sm text-lime-300">
                             {status}
                         </div>
                     )}
@@ -54,7 +49,6 @@ export default function Login({ status }: { status?: string }) {
                             value={data.login}
                             onChange={(e) => setData('login', e.target.value)}
                             error={errors.login}
-                            leftIcon={<User className="w-4 h-4" />}
                             placeholder="Email or +2519..."
                             required
                         />
@@ -65,8 +59,7 @@ export default function Login({ status }: { status?: string }) {
                             value={data.password}
                             onChange={(e) => setData('password', e.target.value)}
                             error={errors.password}
-                            leftIcon={<Lock className="w-4 h-4" />}
-                            placeholder="Enter password"
+                            placeholder="Password"
                             required
                         />
 
@@ -76,14 +69,14 @@ export default function Login({ status }: { status?: string }) {
                                     type="checkbox"
                                     checked={data.remember}
                                     onChange={(e) => setData('remember', e.target.checked)}
-                                    className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                    className="h-4 w-4 border-slate-600 bg-transparent accent-lime-300"
                                 />
                                 <span>{t('auth.remember_me')}</span>
                             </label>
 
                             <Link
                                 href="/forgot-password"
-                                className="text-emerald-400 hover:text-emerald-300 hover:underline font-medium"
+                                className="text-lime-300 hover:underline"
                             >
                                 {t('auth.forgot_password')}
                             </Link>
@@ -99,13 +92,12 @@ export default function Login({ status }: { status?: string }) {
                         </Button>
                     </form>
 
-                    <div className="mt-6 text-center text-xs text-slate-400 border-t border-slate-800 pt-4">
+                    <p className="text-sm text-slate-400">
                         <span>{t('auth.dont_have_account')} </span>
-                        <Link href="/register" className="text-emerald-400 font-semibold hover:underline">
+                        <Link href="/register" className="text-lime-300 hover:underline">
                             {t('common.register')}
                         </Link>
-                    </div>
-                </Card>
+                    </p>
             </div>
         </AppLayout>
     );
